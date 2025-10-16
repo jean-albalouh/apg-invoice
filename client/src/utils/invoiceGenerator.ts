@@ -121,23 +121,44 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
     ];
   });
 
-  // Add shipping as separate line if exists
+  // Consolidate shipping lines by carrier
   if (totalShipping > 0) {
+    const shippingByCarrier = new Map<string, { 
+      count: number; 
+      total: number; 
+      dates: Date[];
+    }>();
+    
     data.expenses.forEach((exp, idx) => {
       const calc = calculations[idx];
       if (calc.shippingCost > 0) {
-        tableData.push([
-          format(new Date(exp.date), "dd/MM/yyyy"),
-          `Livraison - ${exp.shippingCarrier || "Standard"}`,
-          "1",
-          `€${calc.shippingCost.toFixed(2)}`,
-          "0%",
-          "€0.00",
-          `€${calc.shippingCost.toFixed(2)}`,
-          "0%",
-          `€${calc.shippingCost.toFixed(2)}`,
-        ]);
+        const carrier = exp.shippingCarrier || "Standard";
+        const existing = shippingByCarrier.get(carrier) || { count: 0, total: 0, dates: [] };
+        existing.count += 1;
+        existing.total += calc.shippingCost;
+        existing.dates.push(new Date(exp.date));
+        shippingByCarrier.set(carrier, existing);
       }
+    });
+    
+    // Add consolidated shipping lines
+    shippingByCarrier.forEach((info, carrier) => {
+      const sortedDates = info.dates.sort((a, b) => a.getTime() - b.getTime());
+      const dateRange = sortedDates.length > 1
+        ? `${format(sortedDates[0], "dd/MM")} au ${format(sortedDates[sortedDates.length - 1], "dd/MM")}`
+        : format(sortedDates[0], "dd/MM/yyyy");
+      
+      tableData.push([
+        dateRange,
+        `Livraison - ${carrier}`,
+        info.count.toString(),
+        `€${info.total.toFixed(2)}`,
+        "0%",
+        "€0.00",
+        `€${info.total.toFixed(2)}`,
+        "0%",
+        `€${info.total.toFixed(2)}`,
+      ]);
     });
   }
 
