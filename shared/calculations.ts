@@ -12,28 +12,36 @@ export interface ExpenseCalculation {
 }
 
 export function calculateExpense(expense: Expense): ExpenseCalculation {
-  const productCostTTC = Number(expense.productCost);
+  const enteredPrice = Number(expense.productCost);
   const tvaPercentage = Number(expense.tvaPercentage || 5.5);
   const markupPercentage = Number(expense.markupPercentage || 0);
   const markupAppliesTo = expense.markupAppliesTo || "TTC";
   const shippingCost = Number(expense.shippingCost);
   const paymentReceived = Number(expense.paymentReceived || 0);
 
-  // Calculate HT from TTC: HT = TTC / (1 + TVA%)
-  const productCostHT = productCostTTC / (1 + tvaPercentage / 100);
-  const tvaAmount = productCostTTC - productCostHT;
-
+  let productCostHT: number;
+  let productCostTTC: number;
+  let tvaAmount: number;
   let productWithMarkup: number;
   let markupAmount: number;
 
   if (markupAppliesTo === "HT") {
-    // Apply markup to HT, then add TVA
-    const htWithMarkup = productCostHT * (1 + markupPercentage / 100);
+    // OPTION A: Treat entered price as HT, apply markup, then add TVA
+    const htWithMarkup = enteredPrice * (1 + markupPercentage / 100);
     const tvaOnMarkup = htWithMarkup * (tvaPercentage / 100);
     productWithMarkup = htWithMarkup + tvaOnMarkup;
+    
+    // For display: calculate what the original HT and TTC would be
+    productCostHT = enteredPrice;
+    productCostTTC = enteredPrice * (1 + tvaPercentage / 100);
+    tvaAmount = productCostTTC - productCostHT;
     markupAmount = productWithMarkup - productCostTTC;
   } else {
-    // Apply markup to TTC (default behavior)
+    // Treat entered price as TTC, apply markup to TTC
+    productCostTTC = enteredPrice;
+    productCostHT = productCostTTC / (1 + tvaPercentage / 100);
+    tvaAmount = productCostTTC - productCostHT;
+    
     productWithMarkup = productCostTTC * (1 + markupPercentage / 100);
     markupAmount = productWithMarkup - productCostTTC;
   }

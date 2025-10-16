@@ -125,7 +125,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
   }, [editExpense, open, form]);
 
   const selectedClient = form.watch("client");
-  const productCostTTC = form.watch("productCost") || 0;
+  const enteredPrice = form.watch("productCost") || 0;
   const tvaPercentage = form.watch("tvaPercentage") || 5.5;
   const markupAppliesTo = form.watch("markupAppliesTo") || "TTC";
   const markupPercentage = form.watch("markupPercentage") || 0;
@@ -142,23 +142,30 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
     }
   }, [selectedClient, form, editExpense]);
 
-  // Calculate HT from TTC: HT = TTC / (1 + TVA%)
-  const productCostHT = Number(productCostTTC) / (1 + Number(tvaPercentage) / 100);
-  const tvaAmount = Number(productCostTTC) - productCostHT;
-
-  // Calculate total based on markup application
+  // Calculate based on markup application (Option A)
+  let productCostHT: number;
+  let productCostTTC: number;
+  let tvaAmount: number;
   let productCostWithMarkup: number;
   let total: number;
   
   if (markupAppliesTo === "HT") {
-    // Apply markup to HT, then add TVA
-    const htWithMarkup = productCostHT * (1 + Number(markupPercentage) / 100);
+    // OPTION A: Treat entered price as HT, apply markup, then add TVA
+    const htWithMarkup = Number(enteredPrice) * (1 + Number(markupPercentage) / 100);
     const tvaOnMarkup = htWithMarkup * (Number(tvaPercentage) / 100);
     productCostWithMarkup = htWithMarkup + tvaOnMarkup;
+    
+    productCostHT = Number(enteredPrice);
+    productCostTTC = Number(enteredPrice) * (1 + Number(tvaPercentage) / 100);
+    tvaAmount = productCostTTC - productCostHT;
     total = productCostWithMarkup + Number(shippingCost);
   } else {
-    // Apply markup to TTC (current behavior)
-    productCostWithMarkup = Number(productCostTTC) * (1 + Number(markupPercentage) / 100);
+    // Treat entered price as TTC, apply markup to TTC
+    productCostTTC = Number(enteredPrice);
+    productCostHT = productCostTTC / (1 + Number(tvaPercentage) / 100);
+    tvaAmount = productCostTTC - productCostHT;
+    
+    productCostWithMarkup = productCostTTC * (1 + Number(markupPercentage) / 100);
     total = productCostWithMarkup + Number(shippingCost);
   }
 
@@ -310,7 +317,9 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
                   name="productCost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium">Product Cost (TTC)</FormLabel>
+                      <FormLabel className="text-sm font-medium">
+                        Product Cost ({markupAppliesTo === "HT" ? "HT" : "TTC"})
+                      </FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
