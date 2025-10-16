@@ -10,6 +10,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expenses = await storage.getAllExpenses();
       res.json(expenses);
     } catch (error) {
+      console.error("Error fetching expenses:", error);
       res.status(500).json({ error: "Failed to fetch expenses" });
     }
   });
@@ -46,6 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expense = await storage.createExpense(result.data);
       res.status(201).json(expense);
     } catch (error) {
+      console.error("Error creating expense:", error);
       res.status(500).json({ error: "Failed to create expense" });
     }
   });
