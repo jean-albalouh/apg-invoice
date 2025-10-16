@@ -27,9 +27,9 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   client: z.string().min(1, "Please select client"),
   productDescription: z.string().min(1, "Product description is required"),
   quantity: z.string().min(1, "Quantity is required"),
-  productCost: z.number().min(0.01, "Product cost must be greater than 0"),
+  productCost: z.number().min(0, "Product cost cannot be negative"),
   markupPercentage: z.number().min(0).max(100),
-  shippingCost: z.number().min(0),
+  shippingCost: z.number().min(0, "Shipping cost cannot be negative"),
   shippingCarrier: z.string().min(1, "Shipping carrier is required"),
   status: z.string().min(1, "Status is required"),
   paymentReceived: z.number().min(0).default(0),
@@ -38,3 +38,37 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
 
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
+
+// Payments table
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp("date").notNull(),
+  client: text("client").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  date: z.string().or(z.date()).transform((val) => new Date(val)),
+  client: z.string().min(1, "Please select client"),
+  amount: z.number().min(0.01, "Payment amount must be greater than 0"),
+  notes: z.string().optional(),
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+// Payment applications - tracks which expenses a payment was applied to
+export const paymentApplications = pgTable("payment_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentId: varchar("payment_id").notNull().references(() => payments.id),
+  expenseId: varchar("expense_id").notNull().references(() => expenses.id),
+  amountApplied: decimal("amount_applied", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export type PaymentApplication = typeof paymentApplications.$inferSelect;
