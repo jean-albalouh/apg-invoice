@@ -4,12 +4,22 @@ import { type Expense, type InsertExpense } from "@shared/schema";
 import { AddExpenseDialog } from "@/components/add-expense-dialog";
 import { ExpenseTable } from "@/components/expense-table";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+const CLIENTS = [
+  { value: "all", label: "All Clients" },
+  { value: "A TA PORTE", label: "A TA PORTE" },
+  { value: "BEST DEAL", label: "BEST DEAL" },
+  { value: "LE PHÉNICIEN", label: "LE PHÉNICIEN" },
+  { value: "LE GRAND MARCHÉ DE FRANCE", label: "LE GRAND MARCHÉ DE FRANCE" },
+] as const;
+
 export default function Expenses() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState("all");
   const { toast } = useToast();
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
@@ -60,6 +70,10 @@ export default function Expenses() {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  const filteredExpenses = selectedClient === "all" 
+    ? sortedExpenses 
+    : sortedExpenses.filter(exp => exp.client === selectedClient);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -87,10 +101,28 @@ export default function Expenses() {
         </Button>
       </div>
 
-      <ExpenseTable
-        expenses={sortedExpenses}
-        onDelete={(id) => deleteMutation.mutate(id)}
-      />
+      <Tabs value={selectedClient} onValueChange={setSelectedClient} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          {CLIENTS.map((client) => (
+            <TabsTrigger 
+              key={client.value} 
+              value={client.value}
+              data-testid={`tab-${client.value.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              {client.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {CLIENTS.map((client) => (
+          <TabsContent key={client.value} value={client.value} className="space-y-4">
+            <ExpenseTable
+              expenses={client.value === "all" ? sortedExpenses : sortedExpenses.filter(exp => exp.client === client.value)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
 
       <AddExpenseDialog
         open={dialogOpen}
