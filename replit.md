@@ -39,8 +39,11 @@ Preferred communication style: Simple, everyday language.
 ### Core Features & Business Logic
 
 -   **Expense Tracking:** Comprehensive fields including quantity, status, shipping carrier, and payment tracking.
--   **TVA Calculation:** Automatic HT/TTC calculation based on selectable TVA rates (5.5%, 10%, 20%). Product cost is entered as TTC.
--   **Flexible Markup:** 5% default markup (adjustable) can be applied to either HT (before TVA) or TTC (after TVA).
+-   **TVA Calculation:** Automatic HT/TTC calculation based on selectable TVA rates (5.5%, 10%, 20%).
+-   **Flexible Markup (Option A):** 5% default markup (adjustable) with two application modes:
+    -   **Markup on HT**: Entered price is treated as HT, markup applied, then TVA added (e.g., €100 HT × 1.05 × 1.055 = €110.78 TTC)
+    -   **Markup on TTC**: Entered price is treated as TTC, markup applied directly (e.g., €100 TTC × 1.05 = €105.00 TTC)
+    -   Form label dynamically changes to show "Product Cost (HT)" or "Product Cost (TTC)" based on markup selection
 -   **Client Management:** Client-based organization (A TA PORTE, BEST DEAL, LE PHÉNICIEN, GRAND MARCHÉ) with statutory company information (SIREN, TVA, address, phone).
 -   **Payment System:** Dedicated payments page to record payments, which auto-distribute to the oldest unpaid expenses (FIFO). Payments can be deleted, reversing applications.
 -   **Reporting:** Monthly PDF reports (full consolidated or per-company) with A TA PORTE header, financial summaries (Total Billed, Paid, Balance), and payment history exports.
