@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Expense } from "@shared/schema";
+import { calculateExpense } from "@shared/calculations";
 import { StatsCard } from "@/components/stats-card";
 import { ExpenseTable } from "@/components/expense-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,20 +28,28 @@ export default function Dashboard() {
     return expDate >= monthStart && expDate <= monthEnd;
   });
 
-  const totalProductCost = currentMonthExpenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
+  const calculations = currentMonthExpenses.map(exp => calculateExpense(exp));
+  
+  const totalProductCost = calculations.reduce(
+    (sum, calc) => sum + calc.productWithMarkup,
     0
   );
-  const totalShippingCost = currentMonthExpenses.reduce(
-    (sum, exp) => sum + Number(exp.shippingCost),
+  const totalShippingCost = calculations.reduce(
+    (sum, calc) => sum + calc.shippingCost,
     0
   );
   const totalPaymentReceived = currentMonthExpenses.reduce(
     (sum, exp) => sum + Number(exp.paymentReceived),
     0
   );
-  const totalExpenses = totalProductCost + totalShippingCost;
-  const totalBalanceOwed = totalExpenses - totalPaymentReceived;
+  const totalExpenses = calculations.reduce(
+    (sum, calc) => sum + calc.total,
+    0
+  );
+  const totalBalanceOwed = calculations.reduce(
+    (sum, calc) => sum + calc.balance,
+    0
+  );
 
   const recentExpenses = [...currentMonthExpenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -49,12 +58,12 @@ export default function Dashboard() {
   // Calculate balances by client
   const clientBalances = CLIENTS.map(client => {
     const clientExpenses = currentMonthExpenses.filter(exp => exp.client === client);
-    const total = clientExpenses.reduce((sum, exp) => {
-      const productWithMarkup = Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100);
-      return sum + productWithMarkup + Number(exp.shippingCost);
-    }, 0);
+    const clientCalculations = clientExpenses.map(exp => calculateExpense(exp));
+    
+    const total = clientCalculations.reduce((sum, calc) => sum + calc.total, 0);
     const paid = clientExpenses.reduce((sum, exp) => sum + Number(exp.paymentReceived), 0);
     const balance = total - paid;
+    
     return {
       client,
       total,
