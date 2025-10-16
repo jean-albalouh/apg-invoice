@@ -38,11 +38,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const CLIENTS = [
   "A TA PORTE",
@@ -130,6 +132,69 @@ export default function Payments() {
 
   const totalPayments = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
 
+  const handleExportPaymentsPDF = () => {
+    const doc = new jsPDF();
+
+    // A TA PORTE Header
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text("A TA PORTE", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text("Shipping & Fulfillment Services", 14, 27);
+    
+    // Report Title
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text("Payment History Report", 14, 40);
+    
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Generated: ${format(new Date(), "MMMM dd, yyyy")}`, 14, 48);
+    
+    // Summary
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text("Summary", 14, 58);
+    
+    doc.setFont(undefined, 'normal');
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(250, 250, 250);
+    doc.rect(14, 63, 70, 10, 'FD');
+    
+    doc.setFontSize(9);
+    doc.text(`Total Payments:`, 18, 70);
+    doc.setTextColor(0, 150, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text(`€${totalPayments.toFixed(2)}`, 75, 70, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+
+    // Sort payments by date (newest first)
+    const sortedPayments = [...payments].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    const tableData = sortedPayments.map((payment) => [
+      format(new Date(payment.date), "MMM dd, yyyy"),
+      payment.client,
+      `€${Number(payment.amount).toFixed(2)}`,
+      payment.notes || "-",
+    ]);
+
+    autoTable(doc, {
+      head: [["Date", "Client", "Amount", "Notes"]],
+      body: tableData,
+      startY: 80,
+      theme: "striped",
+      headStyles: { fillColor: [33, 150, 243] },
+    });
+
+    const fileName = `payment-history-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -139,10 +204,20 @@ export default function Payments() {
             Record client payments and auto-distribute to unpaid expenses
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} data-testid="button-add-payment">
-          <Plus className="mr-2 h-4 w-4" />
-          Record Payment
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleExportPaymentsPDF} 
+            variant="outline"
+            data-testid="button-export-payments-pdf"
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
+          <Button onClick={() => setDialogOpen(true)} data-testid="button-add-payment">
+            <Plus className="mr-2 h-4 w-4" />
+            Record Payment
+          </Button>
+        </div>
       </div>
 
       <Card>
