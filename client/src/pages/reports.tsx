@@ -191,8 +191,11 @@ export default function Reports() {
       return;
     }
 
+    console.log("Starting French invoice generation for:", selectedCompany);
+
     // Generate invoice number
     const invoiceNumber = generateInvoiceNumber(invoiceNumbers, monthStart);
+    console.log("Generated invoice number:", invoiceNumber.formatted);
 
     // Calculate total paid for the selected company
     const totalPaid = sortedExpenses.reduce(
@@ -210,7 +213,9 @@ export default function Reports() {
     });
 
     const fileName = `facture-${invoiceNumber.formatted}-${selectedCompany.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    console.log("Saving French invoice PDF:", fileName);
     doc.save(fileName);
+    console.log("French invoice PDF download triggered successfully");
   };
 
   return (

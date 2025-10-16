@@ -68,7 +68,7 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
   // Calculate totals with TVA breakdown
   const calculations = data.expenses.map((exp) => calculateExpense(exp));
   
-  // Group by TVA rate for summary
+  // Group by TVA rate for summary (using marked-up values for consistency)
   const tvaGroups = new Map<number, { ht: number; tva: number; ttc: number }>();
   
   calculations.forEach((calc, idx) => {
@@ -76,18 +76,33 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
     const tvaRate = Number(exp.tvaPercentage);
     const existing = tvaGroups.get(tvaRate) || { ht: 0, tva: 0, ttc: 0 };
     
-    existing.ht += calc.productCostHT;
-    existing.tva += calc.tvaAmount;
-    existing.ttc += calc.productCostTTC;
+    // Calculate HT and TVA from the marked-up amount
+    // productWithMarkup is TTC with markup, need to extract HT and TVA
+    const markedUpTTC = calc.productWithMarkup;
+    const markedUpHT = markedUpTTC / (1 + tvaRate / 100);
+    const markedUpTVA = markedUpTTC - markedUpHT;
+    
+    existing.ht += markedUpHT;
+    existing.tva += markedUpTVA;
+    existing.ttc += markedUpTTC;
     
     tvaGroups.set(tvaRate, existing);
   });
 
   const totalShipping = calculations.reduce((sum, calc) => sum + calc.shippingCost, 0);
-  const totalHT = calculations.reduce((sum, calc) => sum + calc.productCostHT, 0);
-  const totalTVA = calculations.reduce((sum, calc) => sum + calc.tvaAmount, 0);
-  const totalTTC = calculations.reduce((sum, calc) => sum + calc.productCostTTC, 0);
   const totalWithMarkup = calculations.reduce((sum, calc) => sum + calc.productWithMarkup, 0);
+  
+  // Calculate totals from TVA groups (already includes markup)
+  let totalHT = 0;
+  let totalTVA = 0;
+  let totalTTC = 0;
+  
+  tvaGroups.forEach((group) => {
+    totalHT += group.ht;
+    totalTVA += group.tva;
+    totalTTC += group.ttc;
+  });
+  
   const grandTotal = totalWithMarkup + totalShipping;
 
   // Items Table with TVA breakdown
@@ -213,7 +228,7 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Total HT (avec marge):", 125, totalsY + 8);
+  doc.text("Sous-total produits TTC:", 125, totalsY + 8);
   doc.text(`€${totalWithMarkup.toFixed(2)}`, 188, totalsY + 8, {
     align: "right",
   });
@@ -225,7 +240,7 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("TOTAL À PAYER:", 125, totalsY + 28);
+  doc.text("TOTAL TTC À PAYER:", 125, totalsY + 28);
   doc.text(`€${grandTotal.toFixed(2)}`, 188, totalsY + 28, { align: "right" });
 
   // Payment Status
