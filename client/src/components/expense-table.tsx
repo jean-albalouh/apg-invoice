@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { type Expense } from "@shared/schema";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -33,14 +34,19 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const totalProductCost = expenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost),
+    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
     0
   );
-  const totalParcelCost = expenses.reduce(
-    (sum, exp) => sum + Number(exp.parcelCost),
+  const totalShippingCost = expenses.reduce(
+    (sum, exp) => sum + Number(exp.shippingCost),
     0
   );
-  const grandTotal = totalProductCost + totalParcelCost;
+  const totalPaymentReceived = expenses.reduce(
+    (sum, exp) => sum + Number(exp.paymentReceived),
+    0
+  );
+  const grandTotal = totalProductCost + totalShippingCost;
+  const balanceOwed = grandTotal - totalPaymentReceived;
 
   const handleDelete = () => {
     if (deleteId && onDelete) {
@@ -85,12 +91,16 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-semibold">Date</TableHead>
-                <TableHead className="font-semibold">Product Description</TableHead>
-                <TableHead className="font-semibold">Paid By</TableHead>
-                <TableHead className="font-semibold text-right">Product Cost</TableHead>
-                <TableHead className="font-semibold text-right">Parcel Cost</TableHead>
+                <TableHead className="font-semibold">Client</TableHead>
+                <TableHead className="font-semibold">Product</TableHead>
+                <TableHead className="font-semibold">Qty</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="font-semibold text-right">Product+Markup</TableHead>
+                <TableHead className="font-semibold text-right">Shipping</TableHead>
                 <TableHead className="font-semibold text-right">Total</TableHead>
-                {showActions && <TableHead className="font-semibold text-right w-[100px]">Actions</TableHead>}
+                <TableHead className="font-semibold text-right">Paid</TableHead>
+                <TableHead className="font-semibold text-right">Balance</TableHead>
+                {showActions && <TableHead className="font-semibold text-right w-[80px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,20 +113,39 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
                   <TableCell className="font-medium">
                     {format(new Date(expense.date), "MMM dd, yyyy")}
                   </TableCell>
-                  <TableCell className="max-w-md">
+                  <TableCell className="font-medium" data-testid={`text-client-${expense.id}`}>
+                    {expense.client}
+                  </TableCell>
+                  <TableCell className="max-w-xs">
                     <div className="line-clamp-2">{expense.productDescription}</div>
                   </TableCell>
-                  <TableCell className="font-medium" data-testid={`text-paid-by-${expense.id}`}>
-                    {expense.paidBy}
+                  <TableCell className="font-medium">{expense.quantity}</TableCell>
+                  <TableCell>
+                    <span className={cn(
+                      "px-2 py-1 rounded text-xs font-medium",
+                      expense.status === "Shipped" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100",
+                      expense.status === "Cancelled" && "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100",
+                      expense.status === "Refund" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-100",
+                      expense.status === "Pending" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100",
+                      expense.status === "Processing" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100",
+                    )}>
+                      {expense.status}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
-                    €{Number(expense.productCost).toFixed(2)}
+                    €{(Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100)).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
-                    €{Number(expense.parcelCost).toFixed(2)}
+                    €{Number(expense.shippingCost).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    €{(Number(expense.productCost) + Number(expense.parcelCost)).toFixed(2)}
+                    €{(Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100) + Number(expense.shippingCost)).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-green-600 dark:text-green-400">
+                    €{Number(expense.paymentReceived).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold text-red-600 dark:text-red-400">
+                    €{((Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100) + Number(expense.shippingCost)) - Number(expense.paymentReceived)).toFixed(2)}
                   </TableCell>
                   {showActions && (
                     <TableCell className="text-right">
@@ -139,15 +168,21 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
             </TableBody>
             <TableFooter>
               <TableRow className="bg-muted/50">
-                <TableCell colSpan={3} className="font-semibold">Total</TableCell>
+                <TableCell colSpan={5} className="font-semibold">Totals</TableCell>
                 <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-product-cost">
                   €{totalProductCost.toFixed(2)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-parcel-cost">
-                  €{totalParcelCost.toFixed(2)}
+                <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-shipping-cost">
+                  €{totalShippingCost.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-semibold text-lg" data-testid="text-grand-total">
                   €{grandTotal.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums font-semibold text-green-600 dark:text-green-400">
+                  €{totalPaymentReceived.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums font-semibold text-lg text-red-600 dark:text-red-400" data-testid="text-balance-owed">
+                  €{balanceOwed.toFixed(2)}
                 </TableCell>
                 {showActions && <TableCell />}
               </TableRow>

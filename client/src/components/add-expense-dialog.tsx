@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertExpenseSchema, type InsertExpense } from "@shared/schema";
@@ -31,6 +31,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -38,21 +39,56 @@ interface AddExpenseDialogProps {
   onSubmit: (data: InsertExpense) => Promise<void>;
 }
 
+const CLIENTS = [
+  "A TA PORTE",
+  "BEST DEAL",
+  "LE PHÉNICIEN",
+  "LE GRAND MARCHÉ DE FRANCE",
+] as const;
+
+const STATUS_OPTIONS = [
+  "Shipped",
+  "Cancelled",
+  "Refund",
+  "Pending",
+  "Processing",
+] as const;
+
 export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [showCustomPaidBy, setShowCustomPaidBy] = useState(false);
+  const [showCustomCarrier, setShowCustomCarrier] = useState(false);
 
   const form = useForm<InsertExpense>({
     resolver: zodResolver(insertExpenseSchema),
     defaultValues: {
       date: new Date(),
+      client: "",
       productDescription: "",
+      quantity: "1",
       productCost: undefined as any,
-      parcelCost: undefined as any,
-      paidBy: "",
+      markupPercentage: 5,
+      shippingCost: undefined as any,
+      shippingCarrier: "Colissimo",
+      status: "Shipped",
+      paymentReceived: 0,
+      notes: "",
     },
   });
+
+  const selectedClient = form.watch("client");
+  const productCost = form.watch("productCost") || 0;
+  const markupPercentage = form.watch("markupPercentage") || 0;
+  const shippingCost = form.watch("shippingCost") || 0;
+
+  // Auto-set shipping cost based on client
+  useEffect(() => {
+    if (selectedClient === "BEST DEAL") {
+      form.setValue("shippingCost", 3.15);
+    }
+  }, [selectedClient, form]);
+
+  const productCostWithMarkup = Number(productCost) * (1 + Number(markupPercentage) / 100);
+  const total = productCostWithMarkup + Number(shippingCost);
 
   const handleSubmit = async (data: InsertExpense) => {
     try {
@@ -60,228 +96,391 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
       await onSubmit(data);
       form.reset({
         date: new Date(),
+        client: "",
         productDescription: "",
+        quantity: "1",
         productCost: undefined as any,
-        parcelCost: undefined as any,
-        paidBy: "",
+        markupPercentage: 5,
+        shippingCost: undefined as any,
+        shippingCarrier: "Colissimo",
+        status: "Shipped",
+        paymentReceived: 0,
+        notes: "",
       });
-      setShowCustomPaidBy(false);
+      setShowCustomCarrier(false);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const productCost = form.watch("productCost") || 0;
-  const parcelCost = form.watch("parcelCost") || 0;
-  const total = Number(productCost) + Number(parcelCost);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Add New Expense</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="text-sm font-medium">Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                          data-testid="button-date-picker"
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            field.onChange(date);
-                          }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm font-medium">Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="button-date-picker"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(new Date(field.value), "PPP") : "Pick a date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                field.onChange(date);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="productDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Product Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe the product(s) purchased..."
-                      className="resize-none min-h-[80px]"
-                      data-testid="input-product-description"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="productCost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Product Cost</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          placeholder="0.00"
-                          className="pl-7 tabular-nums"
-                          data-testid="input-product-cost"
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            const val = e.target.valueAsNumber;
-                            field.onChange(isNaN(val) ? undefined : val);
-                          }}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="parcelCost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Parcel/Shipping Cost</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          placeholder="0.00"
-                          className="pl-7 tabular-nums"
-                          data-testid="input-parcel-cost"
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            const val = e.target.valueAsNumber;
-                            field.onChange(isNaN(val) ? undefined : val);
-                          }}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="paidBy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Paid By</FormLabel>
-                  <FormControl>
-                    {showCustomPaidBy ? (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Enter company name..."
-                          data-testid="input-custom-paid-by"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setShowCustomPaidBy(false);
-                            field.onChange("");
-                          }}
-                          data-testid="button-cancel-custom"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          if (value === "custom") {
-                            setShowCustomPaidBy(true);
-                            field.onChange("");
-                          } else {
-                            field.onChange(value);
-                          }
-                        }}
-                      >
-                        <SelectTrigger data-testid="select-paid-by">
-                          <SelectValue placeholder="Select who paid" />
-                        </SelectTrigger>
+                <FormField
+                  control={form.control}
+                  name="client"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Client</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-client">
+                            <SelectValue placeholder="Select client" />
+                          </SelectTrigger>
+                        </FormControl>
                         <SelectContent>
-                          <SelectItem value="A TA PORTE" data-testid="option-a-ta-porte">A TA PORTE</SelectItem>
-                          <SelectItem value="BEST DEAT" data-testid="option-best-deat">BEST DEAT</SelectItem>
-                          <SelectItem value="custom" data-testid="option-custom">Other (Custom)...</SelectItem>
+                          {CLIENTS.map((client) => (
+                            <SelectItem key={client} value={client} data-testid={`option-client-${client.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {client}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                    )}
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="bg-muted/50 rounded-md p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-muted-foreground">Total Amount</span>
-                <span className="text-2xl font-semibold tabular-nums" data-testid="text-total-amount">
-                  €{total.toFixed(2)}
-                </span>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
 
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-                data-testid="button-cancel"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} data-testid="button-save-expense">
-                {isSubmitting ? "Saving..." : "Save Expense"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <FormField
+                control={form.control}
+                name="productDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Product Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe the product(s)..."
+                        className="resize-none min-h-[60px]"
+                        data-testid="input-product-description"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Quantity</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="1"
+                          data-testid="input-quantity"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="productCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Product Cost</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0.00"
+                            className="pl-7 tabular-nums"
+                            data-testid="input-product-cost"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const val = e.target.valueAsNumber;
+                              field.onChange(isNaN(val) ? undefined : val);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="markupPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Markup %</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="5"
+                            className="pr-7 tabular-nums"
+                            data-testid="input-markup"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const val = e.target.valueAsNumber;
+                              field.onChange(isNaN(val) ? 0 : val);
+                            }}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="shippingCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Shipping Cost</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            className="pl-7 tabular-nums"
+                            data-testid="input-shipping-cost"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const val = e.target.valueAsNumber;
+                              field.onChange(isNaN(val) ? undefined : val);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="shippingCarrier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Shipping Carrier</FormLabel>
+                      <FormControl>
+                        {showCustomCarrier ? (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter carrier name..."
+                              data-testid="input-custom-carrier"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setShowCustomCarrier(false);
+                                field.onChange("Colissimo");
+                              }}
+                              data-testid="button-cancel-custom-carrier"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              if (value === "custom") {
+                                setShowCustomCarrier(true);
+                                field.onChange("");
+                              } else {
+                                field.onChange(value);
+                              }
+                            }}
+                          >
+                            <SelectTrigger data-testid="select-shipping-carrier">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Colissimo">Colissimo</SelectItem>
+                              <SelectItem value="custom">Other (Custom)...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Status</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((status) => (
+                            <SelectItem key={status} value={status} data-testid={`option-status-${status.toLowerCase()}`}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paymentReceived"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Payment Received</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            className="pl-7 tabular-nums"
+                            data-testid="input-payment-received"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const val = e.target.valueAsNumber;
+                              field.onChange(isNaN(val) ? 0 : val);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add any additional notes..."
+                        className="resize-none min-h-[60px]"
+                        data-testid="input-notes"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="bg-muted/50 rounded-md p-4 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Product Cost with Markup</span>
+                  <span className="font-medium tabular-nums">€{productCostWithMarkup.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Shipping Cost</span>
+                  <span className="font-medium tabular-nums">€{Number(shippingCost).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-2xl font-semibold tabular-nums" data-testid="text-total-amount">
+                    €{total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} data-testid="button-save-expense">
+                  {isSubmitting ? "Saving..." : "Save Expense"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -40,14 +40,19 @@ export default function Reports() {
   );
 
   const totalProductCost = filteredExpenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost),
+    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
     0
   );
-  const totalParcelCost = filteredExpenses.reduce(
-    (sum, exp) => sum + Number(exp.parcelCost),
+  const totalShippingCost = filteredExpenses.reduce(
+    (sum, exp) => sum + Number(exp.shippingCost),
     0
   );
-  const grandTotal = totalProductCost + totalParcelCost;
+  const totalPaymentReceived = filteredExpenses.reduce(
+    (sum, exp) => sum + Number(exp.paymentReceived),
+    0
+  );
+  const grandTotal = totalProductCost + totalShippingCost;
+  const balanceOwed = grandTotal - totalPaymentReceived;
 
   const generateMonthOptions = () => {
     const options = [];
@@ -70,26 +75,34 @@ export default function Reports() {
     doc.setFontSize(12);
     doc.text(format(monthStart, "MMMM yyyy"), 14, 32);
 
-    const tableData = sortedExpenses.map((exp) => [
-      format(new Date(exp.date), "MMM dd, yyyy"),
-      exp.productDescription,
-      exp.paidBy,
-      `€${Number(exp.productCost).toFixed(2)}`,
-      `€${Number(exp.parcelCost).toFixed(2)}`,
-      `€${(Number(exp.productCost) + Number(exp.parcelCost)).toFixed(2)}`,
-    ]);
+    const tableData = sortedExpenses.map((exp) => {
+      const productWithMarkup = Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100);
+      const total = productWithMarkup + Number(exp.shippingCost);
+      return [
+        format(new Date(exp.date), "MMM dd, yyyy"),
+        exp.client,
+        exp.productDescription,
+        exp.quantity,
+        `€${productWithMarkup.toFixed(2)}`,
+        `€${Number(exp.shippingCost).toFixed(2)}`,
+        `€${total.toFixed(2)}`,
+        exp.status,
+      ];
+    });
 
     autoTable(doc, {
-      head: [["Date", "Product Description", "Paid By", "Product Cost", "Parcel Cost", "Total"]],
+      head: [["Date", "Client", "Product", "Qty", "Product+Markup", "Shipping", "Total", "Status"]],
       body: tableData,
       foot: [
         [
-          "Total",
+          "Totals",
+          "",
           "",
           "",
           `€${totalProductCost.toFixed(2)}`,
-          `€${totalParcelCost.toFixed(2)}`,
+          `€${totalShippingCost.toFixed(2)}`,
           `€${grandTotal.toFixed(2)}`,
+          "",
         ],
       ],
       startY: 40,
@@ -149,7 +162,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold tabular-nums" data-testid="report-shipping-cost">
-              €{totalParcelCost.toFixed(2)}
+              €{totalShippingCost.toFixed(2)}
             </div>
           </CardContent>
         </Card>

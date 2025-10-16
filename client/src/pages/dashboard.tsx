@@ -20,14 +20,14 @@ export default function Dashboard() {
   });
 
   const totalProductCost = currentMonthExpenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost),
+    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
     0
   );
-  const totalParcelCost = currentMonthExpenses.reduce(
-    (sum, exp) => sum + Number(exp.parcelCost),
+  const totalShippingCost = currentMonthExpenses.reduce(
+    (sum, exp) => sum + Number(exp.shippingCost),
     0
   );
-  const totalExpenses = totalProductCost + totalParcelCost;
+  const totalExpenses = totalProductCost + totalShippingCost;
 
   const recentExpenses = [...currentMonthExpenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -65,7 +65,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Shipping Costs"
-          value={`€${totalParcelCost.toFixed(2)}`}
+          value={`€${totalShippingCost.toFixed(2)}`}
           icon={Truck}
           trend={`${currentMonthExpenses.length} parcels shipped`}
           testId="stat-shipping-cost"

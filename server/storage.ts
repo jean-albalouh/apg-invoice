@@ -25,7 +25,9 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertExpense,
         productCost: insertExpense.productCost.toString(),
-        parcelCost: insertExpense.parcelCost.toString(),
+        markupPercentage: insertExpense.markupPercentage.toString(),
+        shippingCost: insertExpense.shippingCost.toString(),
+        paymentReceived: insertExpense.paymentReceived.toString(),
       })
       .returning();
     return expense;
