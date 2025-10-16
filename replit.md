@@ -6,12 +6,17 @@ A web-based expense tracking application designed for France-based e-commerce fu
 
 **Key Features:**
 - Comprehensive expense tracking with quantity, status, shipping carrier, and payment tracking
-- Client-based organization with tabs: A TA PORTE, BEST DEAL, LE PHÉNICIEN, LE GRAND MARCHÉ DE FRANCE
+- **Edit expense functionality** - Modify existing expenses with pre-filled form data
+- Client-based organization with tabs: A TA PORTE, BEST DEAL, LE PHÉNICIEN, GRAND MARCHÉ
 - Automatic markup calculation (5% default, adjustable per expense)
-- Client-specific shipping costs (BEST DEAL auto-set to €3.15)
+- **Clear product + markup breakdown** - Shows "Product: €100.00 + 5% = €105.00" format
+- Client-specific shipping costs (BEST DEAL auto-set to €3.15 for new entries only)
+- **Custom status entry** - Manual status text input option alongside predefined choices
 - Real-time dashboard with monthly statistics and per-client balance tracking
+- **Enhanced company tabs** - Financial summary cards showing Orders, Total Billed, Paid, Balance per client
+- **A TA PORTE Financial Overview** - Dashboard showing Paid Out vs Received From each company
 - Payment tracking showing amounts owed vs. paid per client
-- Monthly report generation with comprehensive PDF export
+- **Flexible report generation** - Full consolidated report OR per-company reports with recipient name
 - Light/dark theme support with Material Design interface
 - All amounts in Euros (€) for France-based business operations
 
@@ -56,6 +61,7 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/expenses` - Fetch all expenses
 - `GET /api/expenses/:id` - Fetch single expense
 - `POST /api/expenses` - Create new expense (requires: date, client, productDescription, quantity, productCost, markupPercentage, shippingCost, shippingCarrier, status, paymentReceived, notes)
+- `PATCH /api/expenses/:id` - Update existing expense (same fields as POST)
 - `DELETE /api/expenses/:id` - Delete expense
 
 **Data Validation:**
@@ -126,44 +132,63 @@ Preferred communication style: Simple, everyday language.
 
 ### Recent Changes (October 16, 2025)
 
-**Major Feature Update - Comprehensive Expense Tracking:**
+**Latest Update - Enhanced Features & Bug Fixes:**
 
-**Client Management:**
-- Added four client companies: A TA PORTE, BEST DEAL, LE PHÉNICIEN, LE GRAND MARCHÉ DE FRANCE
-- Client tabs on Expenses page for filtering by client
-- Client-specific shipping cost automation (BEST DEAL = €3.15)
+**Edit Functionality:**
+- Added PATCH `/api/expenses/:id` endpoint for updating existing expenses
+- Edit button in expense table opens dialog pre-filled with expense data
+- All expense fields can be modified except auto-generated ID and timestamps
+- Form validation ensures data integrity on updates
 
-**Enhanced Expense Fields:**
-- Quantity tracking for multiple items per expense
-- Markup percentage with 5% default (adjustable per expense)
-- Automatic product cost with markup calculation
-- Shipping carrier selection (default: Colissimo, or custom)
-- Status tracking: Shipped, Cancelled, Refund, Pending, Processing
-- Payment tracking: record amounts received from clients
-- Notes field for additional information
+**Product + Markup Display:**
+- Clear breakdown shows: "Product: €100.00 + 5% = €105.00"
+- Summary section displays individual components: Product Cost, Markup Amount, Product+Markup Subtotal, Shipping, Total
+- All calculations visible to user during creation and editing
 
-**Dashboard Enhancements:**
-- Client balance cards showing per-client totals, payments, and balances owed
-- Four-stat overview: Product Costs, Shipping Costs, Total Expenses, Balance Owed
-- Recent expenses table with all new fields
+**UI/UX Improvements:**
+- Tab overflow fixed: "LE GRAND MARCHÉ DE FRANCE" shortened to "GRAND MARCHÉ" 
+- Custom status entry: Added "Other (Custom)..." option to status dropdown for manual text entry
+- Works for both status and shipping carrier fields
 
-**Expense Table Updates:**
-- Displays: Client, Product, Quantity, Status (with color badges), Product+Markup, Shipping, Total, Paid, Balance
-- Color-coded status indicators (green for Shipped, red for Cancelled, etc.)
-- Balance tracking showing amounts owed in red, payments in green
+**Enhanced Company Tabs:**
+- Financial summary cards in each client tab showing:
+  - Orders: Total count of expenses
+  - Total Billed: Sum of all totals
+  - Total Paid: Sum of payments received (displayed in green)
+  - Balance Owed: Outstanding amount (displayed in red)
+- Stats auto-calculate based on filtered expenses for each client
 
-**Report Improvements:**
-- PDF exports include all new columns: Client, Product, Qty, Product+Markup, Shipping, Total, Status
-- Monthly totals with comprehensive breakdown
+**A TA PORTE Financial Dashboard:**
+- New "A TA PORTE Financial Overview" section on dashboard
+- Shows financial relationship with each client company:
+  - Paid Out (A TA PORTE): Amount A TA PORTE paid for client (red)
+  - Received From Company: Amount client paid back to A TA PORTE (green)
+  - Balance: Net amount owed to/from A TA PORTE
+- Separate from "Client Payment Status" which tracks client-side balances
+
+**Flexible Report Generation:**
+- Report type selector: "Full Report (All)" or "Per Company"
+- When "Per Company" selected, company dropdown appears
+- Per-company reports filter to selected client only
+- PDF filename includes company name for per-company reports: `expense-report-best-deal-2025-10.pdf`
+- Full reports use standard naming: `expense-report-2025-10.pdf`
+- Report header shows company name on per-company reports
+
+**Critical Bug Fix:**
+- Fixed BEST DEAL auto-fill overwriting existing shipping costs during edit
+- Auto-fill now only applies to new expenses when shipping cost is empty
+- Preserves custom shipping amounts on existing BEST DEAL expenses
+- All other clients unaffected by auto-fill logic
 
 **Business Logic:**
 - Total = Product Cost × (1 + Markup%) + Shipping Cost
 - Balance = Total - Payment Received
-- BEST DEAL automatically gets €3.15 shipping cost
+- BEST DEAL automatically gets €3.15 shipping cost for NEW entries only
 - All amounts calculated and displayed in Euros (€)
 
-**Database Schema:**
-- Replaced "paidBy" with "client" field for client company tracking
-- Replaced "parcelCost" with "shippingCost" for clarity
-- Added: quantity, markupPercentage, shippingCarrier, status, paymentReceived, notes
-- All decimal fields use (10,2) precision for accurate Euro calculations
+**Technical Implementation:**
+- Storage interface updated with `updateExpense` method
+- DatabaseStorage implements PATCH with validation
+- AddExpenseDialog supports both create and edit modes
+- useEffect guards prevent data corruption on edits
+- Report filtering logic handles both full and per-company views
