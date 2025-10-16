@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertExpenseSchema, type InsertExpense, type Expense } from "@shared/schema";
+import { TVA_RATES, MARKUP_APPLICATION } from "@shared/companyInfo";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,6 +69,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
       productDescription: "",
       quantity: "1",
       productCost: undefined as any,
+      tvaPercentage: 5.5,
+      markupAppliesTo: "TTC",
       markupPercentage: 5,
       shippingCost: undefined as any,
       shippingCarrier: "Colissimo",
@@ -91,6 +94,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
         productDescription: editExpense.productDescription,
         quantity: editExpense.quantity,
         productCost: Number(editExpense.productCost),
+        tvaPercentage: Number(editExpense.tvaPercentage || 5.5),
+        markupAppliesTo: (editExpense.markupAppliesTo || "TTC") as "HT" | "TTC",
         markupPercentage: Number(editExpense.markupPercentage),
         shippingCost: Number(editExpense.shippingCost),
         shippingCarrier: editExpense.shippingCarrier,
@@ -107,6 +112,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
         productDescription: "",
         quantity: "1",
         productCost: undefined as any,
+        tvaPercentage: 5.5,
+        markupAppliesTo: "TTC",
         markupPercentage: 5,
         shippingCost: undefined as any,
         shippingCarrier: "Colissimo",
@@ -118,7 +125,9 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
   }, [editExpense, open, form]);
 
   const selectedClient = form.watch("client");
-  const productCost = form.watch("productCost") || 0;
+  const productCostTTC = form.watch("productCost") || 0;
+  const tvaPercentage = form.watch("tvaPercentage") || 5.5;
+  const markupAppliesTo = form.watch("markupAppliesTo") || "TTC";
   const markupPercentage = form.watch("markupPercentage") || 0;
   const shippingCost = form.watch("shippingCost") || 0;
 
@@ -133,8 +142,25 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
     }
   }, [selectedClient, form, editExpense]);
 
-  const productCostWithMarkup = Number(productCost) * (1 + Number(markupPercentage) / 100);
-  const total = productCostWithMarkup + Number(shippingCost);
+  // Calculate HT from TTC: HT = TTC / (1 + TVA%)
+  const productCostHT = Number(productCostTTC) / (1 + Number(tvaPercentage) / 100);
+  const tvaAmount = Number(productCostTTC) - productCostHT;
+
+  // Calculate total based on markup application
+  let productCostWithMarkup: number;
+  let total: number;
+  
+  if (markupAppliesTo === "HT") {
+    // Apply markup to HT, then add TVA
+    const htWithMarkup = productCostHT * (1 + Number(markupPercentage) / 100);
+    const tvaOnMarkup = htWithMarkup * (Number(tvaPercentage) / 100);
+    productCostWithMarkup = htWithMarkup + tvaOnMarkup;
+    total = productCostWithMarkup + Number(shippingCost);
+  } else {
+    // Apply markup to TTC (current behavior)
+    productCostWithMarkup = Number(productCostTTC) * (1 + Number(markupPercentage) / 100);
+    total = productCostWithMarkup + Number(shippingCost);
+  }
 
   const handleSubmit = async (data: InsertExpense) => {
     try {
@@ -146,6 +172,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
         productDescription: "",
         quantity: "1",
         productCost: undefined as any,
+        tvaPercentage: 5.5,
+        markupAppliesTo: "TTC",
         markupPercentage: 5,
         shippingCost: undefined as any,
         shippingCarrier: "Colissimo",
@@ -258,7 +286,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="quantity"
@@ -282,7 +310,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
                   name="productCost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium">Product Cost</FormLabel>
+                      <FormLabel className="text-sm font-medium">Product Cost (TTC)</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
@@ -305,7 +333,64 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tvaPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">TVA %</FormLabel>
+                      <Select
+                        value={field.value?.toString()}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-tva">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {TVA_RATES.map((rate) => (
+                            <SelectItem key={rate.value} value={rate.value.toString()} data-testid={`option-tva-${rate.value}`}>
+                              {rate.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="markupAppliesTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Markup Applies To</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-markup-applies-to">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {MARKUP_APPLICATION.map((option) => (
+                            <SelectItem key={option.value} value={option.value} data-testid={`option-markup-${option.value.toLowerCase()}`}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="markupPercentage"
@@ -530,12 +615,24 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
 
               <div className="bg-muted/50 rounded-md p-4 space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Product Cost</span>
-                  <span className="font-medium tabular-nums">€{Number(productCost).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Product Cost HT</span>
+                  <span className="font-medium tabular-nums">€{productCostHT.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Markup ({markupPercentage}%)</span>
-                  <span className="font-medium tabular-nums">€{(Number(productCost) * Number(markupPercentage) / 100).toFixed(2)}</span>
+                  <span className="text-muted-foreground">TVA ({tvaPercentage}%)</span>
+                  <span className="font-medium tabular-nums">€{tvaAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t pt-2">
+                  <span className="text-muted-foreground">Product Cost TTC</span>
+                  <span className="font-semibold tabular-nums">€{Number(productCostTTC).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">
+                    Markup ({markupPercentage}% on {markupAppliesTo})
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    €{(productCostWithMarkup - Number(productCostTTC)).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-t pt-2">
                   <span className="text-muted-foreground">Product + Markup</span>
