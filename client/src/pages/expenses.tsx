@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Expense, type InsertExpense } from "@shared/schema";
+import { calculateExpense } from "@shared/calculations";
 import { AddExpenseDialog } from "@/components/add-expense-dialog";
 import { ExpenseTable } from "@/components/expense-table";
 import { Button } from "@/components/ui/button";
@@ -140,10 +141,8 @@ export default function Expenses() {
             ? sortedExpenses 
             : sortedExpenses.filter(exp => exp.client === client.value);
           
-          const totalBilled = clientExpenses.reduce(
-            (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100) + Number(exp.shippingCost),
-            0
-          );
+          const calculations = clientExpenses.map(exp => calculateExpense(exp));
+          const totalBilled = calculations.reduce((sum, calc) => sum + calc.total, 0);
           const totalPaid = clientExpenses.reduce((sum, exp) => sum + Number(exp.paymentReceived), 0);
           const balance = totalBilled - totalPaid;
           const orderCount = clientExpenses.length;
