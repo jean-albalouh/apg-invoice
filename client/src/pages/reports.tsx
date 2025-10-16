@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type Expense } from "@shared/schema";
 import { calculateExpense } from "@shared/calculations";
@@ -69,7 +69,7 @@ export default function Reports() {
   const grandTotal = totalProductCost + totalShippingCost;
   const balanceOwed = grandTotal - totalPaymentReceived;
 
-  const generateMonthOptions = () => {
+  const monthOptions = useMemo(() => {
     const options = [];
     const monthsWithExpenses = new Set<string>();
     
@@ -104,7 +104,7 @@ export default function Reports() {
     }
     
     return options;
-  };
+  }, [expenses]);
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -283,7 +283,7 @@ export default function Reports() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {generateMonthOptions().map((option) => (
+              {monthOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
