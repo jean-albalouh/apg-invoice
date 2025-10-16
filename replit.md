@@ -2,12 +2,14 @@
 
 ## Overview
 
-A web-based expense tracking application designed for e-commerce fulfillment businesses to track product and shipping costs. The application allows users to record expenses with product descriptions and costs, view dashboard analytics, and generate monthly PDF reports for client billing.
+A web-based expense tracking application designed for France-based e-commerce fulfillment businesses to track product and shipping costs. The application allows users to record expenses with product descriptions, costs, and shipping company information, view dashboard analytics, and generate monthly PDF reports for client billing in Euros.
 
 **Key Features:**
-- Expense entry and management (CRUD operations)
+- Expense entry and management (CRUD operations) with persistent PostgreSQL storage
+- Track who paid for shipping: A TA PORTE, BEST DEAT, or custom shipping companies
+- All amounts displayed in Euros (€) for France-based business
 - Real-time dashboard with monthly statistics
-- Monthly report generation with PDF export
+- Monthly report generation with PDF export (including Paid By information)
 - Light/dark theme support
 - Responsive Material Design interface
 
@@ -51,7 +53,7 @@ Preferred communication style: Simple, everyday language.
 **API Structure:**
 - `GET /api/expenses` - Fetch all expenses
 - `GET /api/expenses/:id` - Fetch single expense
-- `POST /api/expenses` - Create new expense
+- `POST /api/expenses` - Create new expense (requires: date, productDescription, productCost, parcelCost, paidBy)
 - `DELETE /api/expenses/:id` - Delete expense
 
 **Data Validation:**
@@ -67,22 +69,24 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage
 
 **Current Implementation:**
-- In-memory storage using Map data structure (MemStorage class)
-- Interface-based storage abstraction (IStorage) for future extensibility
+- PostgreSQL database via Neon (serverless PostgreSQL)
+- DatabaseStorage class implementing IStorage interface
+- Persistent data storage with automatic UUID generation
 
-**Database Schema (Prepared for PostgreSQL):**
+**Database Schema (PostgreSQL):**
 - Expenses table with fields:
-  - id (UUID, primary key)
-  - date (timestamp)
-  - productDescription (text)
-  - productCost (decimal 10,2)
-  - parcelCost (decimal 10,2)
-  - createdAt (timestamp)
+  - id (UUID varchar, primary key, auto-generated)
+  - date (timestamp, required)
+  - productDescription (text, required)
+  - productCost (decimal 10,2, required)
+  - parcelCost (decimal 10,2, required)
+  - paidBy (text, required) - Shipping company: "A TA PORTE", "BEST DEAT", or custom entry
+  - createdAt (timestamp, auto-generated)
 
 **ORM Configuration:**
-- Drizzle ORM configured with PostgreSQL dialect
+- Drizzle ORM with PostgreSQL dialect
 - Schema defined in shared directory for type sharing
-- Migrations directory configured for database versioning
+- Database migration via `npm run db:push` command
 
 ### External Dependencies
 
@@ -110,4 +114,21 @@ Preferred communication style: Simple, everyday language.
 
 **Third-Party Services:**
 - Google Fonts CDN (Inter font family)
-- Configured for Neon Database PostgreSQL hosting (connection via DATABASE_URL environment variable)
+- Neon Database PostgreSQL hosting (active, connection via DATABASE_URL environment variable)
+
+### Recent Changes (October 2025)
+
+**Currency Update:**
+- Changed from USD ($) to Euros (€) throughout the entire application
+- All cost displays, calculations, and PDF reports now use € symbol
+
+**Paid By Feature:**
+- Added "Paid By" field to track shipping company/payer
+- Dropdown options: "A TA PORTE", "BEST DEAT"
+- Custom entry option for other shipping companies
+- Displayed in expense tables and included in PDF reports
+
+**Database Migration:**
+- Migrated from in-memory storage to PostgreSQL database
+- Data now persists permanently across sessions
+- Schema includes paidBy field for shipping company tracking
