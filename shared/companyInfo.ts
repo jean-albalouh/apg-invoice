@@ -47,3 +47,6 @@ export const MARKUP_APPLICATION = [
   { value: "HT", label: "Sur le prix HT (avant TVA)" },
   { value: "TTC", label: "Sur le prix TTC (après TVA)" },
 ];
+
+// A TA PORTE company info (invoice issuer)
+export const A_TA_PORTE_INFO: CompanyInfo = COMPANY_INFO["A TA PORTE"];
