@@ -1,5 +1,6 @@
-import { type Expense, type InsertExpense } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { expenses, type Expense, type InsertExpense } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getAllExpenses(): Promise<Expense[]>;
@@ -8,38 +9,32 @@ export interface IStorage {
   deleteExpense(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private expenses: Map<string, Expense>;
-
-  constructor() {
-    this.expenses = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getAllExpenses(): Promise<Expense[]> {
-    return Array.from(this.expenses.values());
+    return await db.select().from(expenses);
   }
 
   async getExpense(id: string): Promise<Expense | undefined> {
-    return this.expenses.get(id);
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
   }
 
   async createExpense(insertExpense: InsertExpense): Promise<Expense> {
-    const id = randomUUID();
-    const expense: Expense = {
-      ...insertExpense,
-      id,
-      date: new Date(insertExpense.date),
-      productCost: insertExpense.productCost.toString(),
-      parcelCost: insertExpense.parcelCost.toString(),
-      createdAt: new Date(),
-    };
-    this.expenses.set(id, expense);
+    const [expense] = await db
+      .insert(expenses)
+      .values({
+        ...insertExpense,
+        productCost: insertExpense.productCost.toString(),
+        parcelCost: insertExpense.parcelCost.toString(),
+      })
+      .returning();
     return expense;
   }
 
   async deleteExpense(id: string): Promise<boolean> {
-    return this.expenses.delete(id);
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

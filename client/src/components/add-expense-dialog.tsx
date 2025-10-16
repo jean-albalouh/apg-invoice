@@ -21,6 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -34,6 +41,8 @@ interface AddExpenseDialogProps {
 export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [showCustomPaidBy, setShowCustomPaidBy] = useState(false);
+
   const form = useForm<InsertExpense>({
     resolver: zodResolver(insertExpenseSchema),
     defaultValues: {
@@ -41,6 +50,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
       productDescription: "",
       productCost: undefined as any,
       parcelCost: undefined as any,
+      paidBy: "",
     },
   });
 
@@ -53,7 +63,9 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
         productDescription: "",
         productCost: undefined as any,
         parcelCost: undefined as any,
+        paidBy: "",
       });
+      setShowCustomPaidBy(false);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -140,7 +152,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                     <FormLabel className="text-sm font-medium">Product Cost</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
                         <Input
                           type="number"
                           step="0.01"
@@ -169,7 +181,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                     <FormLabel className="text-sm font-medium">Parcel/Shipping Cost</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
                         <Input
                           type="number"
                           step="0.01"
@@ -191,11 +203,65 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="paidBy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Paid By</FormLabel>
+                  <FormControl>
+                    {showCustomPaidBy ? (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter company name..."
+                          data-testid="input-custom-paid-by"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setShowCustomPaidBy(false);
+                            field.onChange("");
+                          }}
+                          data-testid="button-cancel-custom"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          if (value === "custom") {
+                            setShowCustomPaidBy(true);
+                            field.onChange("");
+                          } else {
+                            field.onChange(value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger data-testid="select-paid-by">
+                          <SelectValue placeholder="Select who paid" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A TA PORTE" data-testid="option-a-ta-porte">A TA PORTE</SelectItem>
+                          <SelectItem value="BEST DEAT" data-testid="option-best-deat">BEST DEAT</SelectItem>
+                          <SelectItem value="custom" data-testid="option-custom">Other (Custom)...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="bg-muted/50 rounded-md p-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-muted-foreground">Total Amount</span>
                 <span className="text-2xl font-semibold tabular-nums" data-testid="text-total-amount">
-                  ${total.toFixed(2)}
+                  €{total.toFixed(2)}
                 </span>
               </div>
             </div>

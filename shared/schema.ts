@@ -9,6 +9,7 @@ export const expenses = pgTable("expenses", {
   productDescription: text("product_description").notNull(),
   productCost: decimal("product_cost", { precision: 10, scale: 2 }).notNull(),
   parcelCost: decimal("parcel_cost", { precision: 10, scale: 2 }).notNull(),
+  paidBy: text("paid_by").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
@@ -20,6 +21,7 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   productDescription: z.string().min(1, "Product description is required"),
   productCost: z.number().min(0.01, "Product cost must be greater than 0"),
   parcelCost: z.number().min(0.01, "Parcel cost must be greater than 0"),
+  paidBy: z.string().min(1, "Please select who paid"),
 });
 
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
