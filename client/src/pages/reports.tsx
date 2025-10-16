@@ -82,16 +82,63 @@ export default function Reports() {
   const handleExportPDF = () => {
     const doc = new jsPDF();
 
-    doc.setFontSize(20);
-    doc.text("Monthly Expense Report", 14, 22);
-
-    doc.setFontSize(12);
-    doc.text(format(monthStart, "MMMM yyyy"), 14, 32);
+    // A TA PORTE Header
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text("A TA PORTE", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text("Shipping & Fulfillment Services", 14, 27);
+    
+    // Report Title
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text("Monthly Expense Report", 14, 40);
+    
+    // Date and Recipient
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Period: ${format(monthStart, "MMMM yyyy")}`, 14, 48);
     
     if (reportType === "company") {
-      doc.setFontSize(14);
-      doc.text(`For: ${selectedCompany}`, 14, 42);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(`To: ${selectedCompany}`, 14, 56);
     }
+
+    const summaryStartY = reportType === "company" ? 65 : 57;
+    
+    // Summary Box
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text("Summary", 14, summaryStartY);
+    
+    doc.setFont(undefined, 'normal');
+    const summaryBoxY = summaryStartY + 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(250, 250, 250);
+    doc.rect(14, summaryBoxY, 90, 25, 'FD');
+    
+    doc.setFontSize(9);
+    doc.text(`Total Billed:`, 18, summaryBoxY + 7);
+    doc.text(`€${grandTotal.toFixed(2)}`, 75, summaryBoxY + 7, { align: 'right' });
+    
+    doc.text(`Total Paid:`, 18, summaryBoxY + 14);
+    doc.setTextColor(0, 150, 0);
+    doc.text(`€${totalPaymentReceived.toFixed(2)}`, 75, summaryBoxY + 14, { align: 'right' });
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Balance Remaining:`, 18, summaryBoxY + 21);
+    if (balanceOwed > 0) {
+      doc.setTextColor(200, 0, 0);
+    } else {
+      doc.setTextColor(0, 150, 0);
+    }
+    doc.text(`€${balanceOwed.toFixed(2)}`, 75, summaryBoxY + 21, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
 
     const tableData = sortedExpenses.map((exp) => {
       const productWithMarkup = Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100);
@@ -108,6 +155,8 @@ export default function Reports() {
       ];
     });
 
+    const tableStartY = summaryBoxY + 35;
+
     autoTable(doc, {
       head: [["Date", "Client", "Product", "Qty", "Product+Markup", "Shipping", "Total", "Status"]],
       body: tableData,
@@ -123,7 +172,7 @@ export default function Reports() {
           "",
         ],
       ],
-      startY: reportType === "company" ? 50 : 40,
+      startY: tableStartY,
       theme: "striped",
       headStyles: { fillColor: [33, 150, 243] },
       footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
