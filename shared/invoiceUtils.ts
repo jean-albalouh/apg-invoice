@@ -8,8 +8,8 @@ export interface InvoiceNumber {
 }
 
 /**
- * Generate a new invoice number in format YYYY-MM-NNN
- * @param existingInvoices Array of existing invoice numbers for the month
+ * Generate a new invoice number as simple sequential: 1, 2, 3...
+ * @param existingInvoices Array of all existing invoice numbers
  * @param date Date for the invoice (defaults to today)
  */
 export function generateInvoiceNumber(
@@ -18,28 +18,21 @@ export function generateInvoiceNumber(
 ): InvoiceNumber {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
-  const monthStr = String(month).padStart(2, "0");
-  const prefix = `${year}-${monthStr}`;
 
-  // Filter invoices for the current month and extract sequence numbers
-  const monthlyInvoices = existingInvoices
-    .filter((inv) => inv.startsWith(prefix))
-    .map((inv) => {
-      const parts = inv.split("-");
-      return parts.length === 3 ? parseInt(parts[2], 10) : 0;
-    })
+  // Extract all numeric invoice numbers
+  const allNumbers = existingInvoices
+    .map((inv) => parseInt(inv, 10))
     .filter((num) => !isNaN(num));
 
-  // Find the highest sequence number
-  const maxSequence = monthlyInvoices.length > 0 ? Math.max(...monthlyInvoices) : 0;
-  const nextSequence = maxSequence + 1;
-  const sequenceStr = String(nextSequence).padStart(3, "0");
+  // Find the highest invoice number
+  const maxNumber = allNumbers.length > 0 ? Math.max(...allNumbers) : 0;
+  const nextNumber = maxNumber + 1;
 
   return {
     year,
     month,
-    sequence: nextSequence,
-    formatted: `${prefix}-${sequenceStr}`,
+    sequence: nextNumber,
+    formatted: String(nextNumber),
   };
 }
 
@@ -47,19 +40,14 @@ export function generateInvoiceNumber(
  * Parse an invoice number string into its components
  */
 export function parseInvoiceNumber(invoiceNumber: string): InvoiceNumber | null {
-  const parts = invoiceNumber.split("-");
-  if (parts.length !== 3) return null;
+  const num = parseInt(invoiceNumber, 10);
+  if (isNaN(num)) return null;
 
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const sequence = parseInt(parts[2], 10);
-
-  if (isNaN(year) || isNaN(month) || isNaN(sequence)) return null;
-
+  const now = new Date();
   return {
-    year,
-    month,
-    sequence,
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    sequence: num,
     formatted: invoiceNumber,
   };
 }

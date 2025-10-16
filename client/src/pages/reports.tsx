@@ -13,10 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileText, Receipt } from "lucide-react";
+import { Download, FileText, Receipt, FileSpreadsheet } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import logoUrl from "@assets/logo no background ready to use (1)_1760629728931.png";
 import { generateFrenchInvoice } from "@/utils/invoiceGenerator";
 import { generateInvoiceNumber } from "@shared/invoiceUtils";
@@ -210,6 +211,64 @@ export default function Reports() {
     doc.save(fileName);
   };
 
+  const handleExportExcel = () => {
+    // Prepare data for Excel export
+    const excelData = sortedExpenses.map((exp) => {
+      const calc = calculateExpense(exp);
+      return {
+        Date: format(new Date(exp.date), "MMM dd, yyyy"),
+        Client: exp.client,
+        Product: exp.productDescription,
+        Quantity: exp.quantity,
+        "Product Cost (HT)": `€${calc.productCostHT.toFixed(2)}`,
+        "TVA Amount": `€${calc.tvaAmount.toFixed(2)}`,
+        "Product Cost (TTC)": `€${calc.productCostTTC.toFixed(2)}`,
+        "Markup %": `${exp.markupPercentage}%`,
+        "Product + Markup": `€${calc.productWithMarkup.toFixed(2)}`,
+        Shipping: `€${calc.shippingCost.toFixed(2)}`,
+        "Shipping Carrier": exp.shippingCarrier || "",
+        Total: `€${calc.total.toFixed(2)}`,
+        Paid: `€${exp.paymentReceived || 0}`,
+        Balance: `€${calc.balance.toFixed(2)}`,
+        Status: exp.status || "",
+        Notes: exp.notes || "",
+      };
+    });
+
+    // Add summary row
+    excelData.push({
+      Date: "TOTALS",
+      Client: "",
+      Product: "",
+      Quantity: "",
+      "Product Cost (HT)": "",
+      "TVA Amount": "",
+      "Product Cost (TTC)": "",
+      "Markup %": "",
+      "Product + Markup": `€${totalProductCost.toFixed(2)}`,
+      Shipping: `€${totalShippingCost.toFixed(2)}`,
+      "Shipping Carrier": "",
+      Total: `€${grandTotal.toFixed(2)}`,
+      Paid: `€${totalPaymentReceived.toFixed(2)}`,
+      Balance: `€${balanceOwed.toFixed(2)}`,
+      Status: "",
+      Notes: "",
+    });
+
+    // Create worksheet and workbook
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
+
+    // Generate filename
+    const fileName = reportType === "company"
+      ? `expense-report-${selectedCompany.toLowerCase().replace(/\s+/g, '-')}-${format(monthStart, "yyyy-MM")}.xlsx`
+      : `expense-report-${format(monthStart, "yyyy-MM")}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const handleExportFrenchInvoice = () => {
     if (reportType !== "company") {
       alert("Veuillez sélectionner une compagnie pour générer une facture");
@@ -347,7 +406,16 @@ export default function Reports() {
               variant="outline"
             >
               <FileText className="mr-2 h-4 w-4" />
-              {reportType === "company" ? "Export Report" : "Export Full Report"}
+              Export PDF
+            </Button>
+            <Button
+              onClick={handleExportExcel}
+              disabled={filteredExpenses.length === 0}
+              data-testid="button-export-excel"
+              variant="outline"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export Excel
             </Button>
             {reportType === "company" && (
               <Button
