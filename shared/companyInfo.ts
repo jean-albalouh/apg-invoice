@@ -14,7 +14,7 @@ export const COMPANY_INFO: Record<string, CompanyInfo> = {
     phone: "07 58 33 31 24",
     tvaNumber: "FR37981176704",
   },
-  "GRAND MARCHÉ": {
+  "LE GRAND MARCHÉ DE FRANCE": {
     name: "LE GRAND MARCHÉ DE FRANCE",
     siren: "980966220",
     address: "8 RUE JEAN NICOT, 93500 PANTIN",

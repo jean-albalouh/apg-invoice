@@ -2,27 +2,7 @@
 
 ## Overview
 
-A web-based expense tracking application designed for France-based e-commerce fulfillment businesses to track product and shipping costs. The application allows users to record expenses with product descriptions, costs, and shipping company information, view dashboard analytics, and generate monthly PDF reports for client billing in Euros.
-
-**Key Features:**
-- Comprehensive expense tracking with quantity, status, shipping carrier, and payment tracking
-- **Edit expense functionality** - Modify existing expenses with pre-filled form data
-- Client-based organization with tabs: A TA PORTE, BEST DEAL, LE PHÉNICIEN, GRAND MARCHÉ
-- Automatic markup calculation (5% default, adjustable per expense)
-- **Clear product + markup breakdown** - Shows "Product: €100.00 + 5% = €105.00" format
-- Client-specific shipping costs (BEST DEAL auto-set to €3.15 for new entries only)
-- **Custom status entry** - Manual status text input option alongside predefined choices
-- Real-time dashboard with monthly statistics and per-client balance tracking
-- **Enhanced company tabs** - Financial summary cards showing Orders, Total Billed, Paid, Balance per client
-- **A TA PORTE Financial Overview** - Dashboard showing Paid Out vs Received From each company
-- **Payment recording system** - Dedicated Payments page to record client payments with auto-distribution
-- **Auto-payment distribution** - Payments automatically apply to oldest unpaid expenses (FIFO)
-- **Payment reversal** - Deleting a payment reverses all applications to expenses
-- **Flexible report generation** - Full consolidated report OR per-company reports with recipient name
-- **Enhanced PDF reports** - A TA PORTE header, company recipient, financial summary (Total Billed, Paid, Balance)
-- **Payment history PDF** - Export all payments with client, date, amount, notes
-- Light/dark theme support with Material Design interface
-- All amounts in Euros (€) for France-based business operations
+A web-based expense tracking application for France-based e-commerce fulfillment businesses. It allows users to record product and shipping costs, apply French VAT (TVA) with flexible markup options (before or after TVA), generate monthly PDF reports for client billing, and track payments. The system supports multiple clients, provides real-time dashboard analytics, and manages client-specific financial summaries in Euros.
 
 ## User Preferences
 
@@ -30,209 +10,50 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 
-**Framework & Build Tool:**
-- React 18 with TypeScript for type safety
-- Vite as the build tool and development server
-- Wouter for lightweight client-side routing (dashboard, expenses, reports pages)
+-   **Framework:** React 18 with TypeScript, Vite.
+-   **UI:** shadcn/ui, Radix UI, Tailwind CSS with Material Design principles, custom HSL color system, Inter font.
+-   **State Management:** TanStack Query for server state, React Hook Form with Zod for form validation.
+-   **Routing:** Wouter for client-side navigation.
 
-**UI Component System:**
-- shadcn/ui component library with Radix UI primitives
-- Tailwind CSS for styling with custom Material Design theme
-- Inter font from Google Fonts for optimal readability
-- Custom color system supporting light/dark modes with HSL color variables
+### Backend
 
-**State Management:**
-- TanStack Query (React Query) for server state management
-- React Hook Form with Zod validation for form handling
-- Local component state for UI interactions
-
-**Design System:**
-- Material Design principles focusing on clarity and efficiency
-- Consistent spacing using Tailwind's spacing scale (2, 4, 6, 8, 12, 16)
-- Professional color palette with primary blue (210 100% 45% light, 210 90% 60% dark)
-- Custom elevation system using rgba overlays for hover/active states
-
-### Backend Architecture
-
-**Server Framework:**
-- Express.js with TypeScript
-- HTTP server with custom request logging middleware
-- RESTful API design pattern
-
-**API Structure:**
-- `GET /api/expenses` - Fetch all expenses
-- `GET /api/expenses/:id` - Fetch single expense
-- `POST /api/expenses` - Create new expense (requires: date, client, productDescription, quantity, productCost, markupPercentage, shippingCost, shippingCarrier, status, paymentReceived, notes)
-- `PATCH /api/expenses/:id` - Update existing expense (same fields as POST)
-- `DELETE /api/expenses/:id` - Delete expense
-- `GET /api/payments` - Fetch all payments (ordered by date desc)
-- `GET /api/payments/:id` - Fetch single payment with applications
-- `POST /api/payments` - Create payment with auto-distribution (requires: date, client, amount, notes)
-- `DELETE /api/payments/:id` - Delete payment and reverse all applications
-
-**Data Validation:**
-- Zod schemas for runtime validation
-- Shared schema definitions between client and server
-- Input validation with detailed error messages using zod-validation-error
-
-**Development Environment:**
-- Vite middleware mode for HMR during development
-- Separate static file serving for production
-- Custom error handling with status codes and JSON responses
+-   **Server:** Express.js with TypeScript, RESTful API design.
+-   **Data Validation:** Zod schemas shared between client/server, `zod-validation-error` for detailed messages.
+-   **API Endpoints:** CRUD operations for expenses and payments, with payment auto-distribution and reversal logic.
+    -   `POST /api/expenses`: Create expense (includes date, client, productDescription, quantity, productCost (TTC), markupPercentage, shippingCost, shippingCarrier, status, tvaPercentage, markupAppliesTo, notes).
+    -   `PATCH /api/expenses/:id`: Update existing expense.
+    -   `POST /api/payments`: Create payment with auto-distribution to oldest unpaid expenses.
+    -   `DELETE /api/payments/:id`: Delete payment and reverse applications.
 
 ### Data Storage
 
-**Current Implementation:**
-- PostgreSQL database via Neon (serverless PostgreSQL)
-- DatabaseStorage class implementing IStorage interface
-- Persistent data storage with automatic UUID generation
+-   **Database:** PostgreSQL (via Neon serverless) using Drizzle ORM.
+-   **Schema:**
+    -   `expenses` table: Stores detailed expense records including `tvaPercentage`, `markupAppliesTo` (HT/TTC), and calculated amounts.
+    -   `payments` table: Records client payments.
+    -   `payment_applications` table: Links payments to specific expenses for tracking distribution.
+-   **ORM:** Drizzle ORM with `drizzle-kit` for migrations.
 
-**Database Schema (PostgreSQL):**
-- Expenses table with fields:
-  - id (UUID varchar, primary key, auto-generated)
-  - date (timestamp, required)
-  - client (text, required) - Client company: "A TA PORTE", "BEST DEAL", "LE PHÉNICIEN", "LE GRAND MARCHÉ DE FRANCE"
-  - productDescription (text, required)
-  - quantity (text, required) - Quantity of items
-  - productCost (decimal 10,2, required) - Base product cost
-  - markupPercentage (decimal 5,2, required, default 5) - Markup percentage
-  - shippingCost (decimal 10,2, required) - Shipping cost (auto-set to 3.15 for BEST DEAL)
-  - shippingCarrier (text, required, default "Colissimo") - Shipping company
-  - status (text, required, default "Shipped") - Shipment status: Shipped, Cancelled, Refund, Pending, Processing
-  - paymentReceived (decimal 10,2, required, default 0) - Amount paid by client
-  - notes (text, nullable) - Optional notes
-  - createdAt (timestamp, auto-generated)
+### Core Features & Business Logic
 
-**ORM Configuration:**
-- Drizzle ORM with PostgreSQL dialect
-- Schema defined in shared directory for type sharing
-- Database migration via `npm run db:push` command
+-   **Expense Tracking:** Comprehensive fields including quantity, status, shipping carrier, and payment tracking.
+-   **TVA Calculation:** Automatic HT/TTC calculation based on selectable TVA rates (5.5%, 10%, 20%). Product cost is entered as TTC.
+-   **Flexible Markup:** 5% default markup (adjustable) can be applied to either HT (before TVA) or TTC (after TVA).
+-   **Client Management:** Client-based organization (A TA PORTE, BEST DEAL, LE PHÉNICIEN, GRAND MARCHÉ) with statutory company information (SIREN, TVA, address, phone).
+-   **Payment System:** Dedicated payments page to record payments, which auto-distribute to the oldest unpaid expenses (FIFO). Payments can be deleted, reversing applications.
+-   **Reporting:** Monthly PDF reports (full consolidated or per-company) with A TA PORTE header, financial summaries (Total Billed, Paid, Balance), and payment history exports.
+-   **Dashboard Analytics:** Real-time monthly statistics, per-client balance tracking, and "A TA PORTE Financial Overview" showing paid out vs. received from each company.
+-   **Dynamic Inputs:** Custom status and shipping carrier text input alongside predefined choices.
+-   **Auto-fill Logic:** BEST DEAL shipping cost auto-fills to €3.15 for *new* entries only when empty.
+-   **Calculations:** Centralized `calculateExpense()` utility for consistent TVA-aware calculations across the application.
 
-### External Dependencies
+## External Dependencies
 
-**Core Libraries:**
-- `@neondatabase/serverless` - PostgreSQL database driver (prepared for use)
-- `drizzle-orm` and `drizzle-kit` - Database ORM and migration tools
-- `@tanstack/react-query` - Server state management
-- `react-hook-form` and `@hookform/resolvers` - Form handling
-- `zod` and `drizzle-zod` - Schema validation
-
-**UI Component Libraries:**
-- `@radix-ui/*` - Headless UI primitives (dialogs, popovers, dropdowns, etc.)
-- `tailwindcss` - Utility-first CSS framework
-- `class-variance-authority` - Component variant management
-- `lucide-react` - Icon library
-
-**Date & Report Generation:**
-- `date-fns` - Date manipulation and formatting
-- `jspdf` and `jspdf-autotable` - PDF generation for reports
-
-**Development Tools:**
-- `@replit/vite-plugin-*` - Replit-specific development enhancements
-- `tsx` - TypeScript execution for development
-- `esbuild` - Server bundle compilation for production
-
-**Third-Party Services:**
-- Google Fonts CDN (Inter font family)
-- Neon Database PostgreSQL hosting (active, connection via DATABASE_URL environment variable)
-
-### Recent Changes (October 16, 2025)
-
-**Latest Update - Enhanced Features & Bug Fixes:**
-
-**Edit Functionality:**
-- Added PATCH `/api/expenses/:id` endpoint for updating existing expenses
-- Edit button in expense table opens dialog pre-filled with expense data
-- All expense fields can be modified except auto-generated ID and timestamps
-- Form validation ensures data integrity on updates
-
-**Product + Markup Display:**
-- Clear breakdown shows: "Product: €100.00 + 5% = €105.00"
-- Summary section displays individual components: Product Cost, Markup Amount, Product+Markup Subtotal, Shipping, Total
-- All calculations visible to user during creation and editing
-
-**UI/UX Improvements:**
-- Tab overflow fixed: "LE GRAND MARCHÉ DE FRANCE" shortened to "GRAND MARCHÉ" 
-- Custom status entry: Added "Other (Custom)..." option to status dropdown for manual text entry
-- Works for both status and shipping carrier fields
-
-**Enhanced Company Tabs:**
-- Financial summary cards in each client tab showing:
-  - Orders: Total count of expenses
-  - Total Billed: Sum of all totals
-  - Total Paid: Sum of payments received (displayed in green)
-  - Balance Owed: Outstanding amount (displayed in red)
-- Stats auto-calculate based on filtered expenses for each client
-
-**A TA PORTE Financial Dashboard:**
-- New "A TA PORTE Financial Overview" section on dashboard
-- Shows financial relationship with each client company:
-  - Paid Out (A TA PORTE): Amount A TA PORTE paid for client (red)
-  - Received From Company: Amount client paid back to A TA PORTE (green)
-  - Balance: Net amount owed to/from A TA PORTE
-- Separate from "Client Payment Status" which tracks client-side balances
-
-**Flexible Report Generation:**
-- Report type selector: "Full Report (All)" or "Per Company"
-- When "Per Company" selected, company dropdown appears
-- Per-company reports filter to selected client only
-- PDF filename includes company name for per-company reports: `expense-report-best-deal-2025-10.pdf`
-- Full reports use standard naming: `expense-report-2025-10.pdf`
-- Report header shows company name on per-company reports
-
-**Critical Bug Fix:**
-- Fixed BEST DEAL auto-fill overwriting existing shipping costs during edit
-- Auto-fill now only applies to new expenses when shipping cost is empty
-- Preserves custom shipping amounts on existing BEST DEAL expenses
-- All other clients unaffected by auto-fill logic
-
-**Business Logic:**
-- Total = Product Cost × (1 + Markup%) + Shipping Cost
-- Balance = Total - Payment Received
-- BEST DEAL automatically gets €3.15 shipping cost for NEW entries only
-- All amounts calculated and displayed in Euros (€)
-
-**Payment Recording System (October 16, 2025):**
-- **Database Schema Extensions:**
-  - Added `payments` table with fields: id, date, client, amount, notes, createdAt
-  - Added `payment_applications` junction table linking payments to expenses
-  - Tracks which payment amounts were applied to which expenses
-  
-- **Auto-Distribution Logic:**
-  - Payments automatically distribute to oldest unpaid expenses first (FIFO)
-  - Only applies to expenses for the same client
-  - Supports partial payments across multiple expenses
-  - Updates expense.paymentReceived field automatically
-  - Creates payment_application records to track distribution
-  
-- **Payment Reversal:**
-  - Deleting a payment reverses all applications
-  - Reduces expense.paymentReceived by applied amounts
-  - Removes payment_application records
-  - Maintains data integrity across the system
-  
-- **Payments Page (New):**
-  - 4-tab navigation: Dashboard, Expenses, Payments, Reports
-  - Record payment form with client selector, amount, date, notes
-  - Payment history table showing all recorded payments
-  - Total Payments Received summary card
-  - Delete payment with automatic reversal
-  - Export payment history to PDF
-  
-- **Enhanced PDF Reports:**
-  - **Expense Reports:** A TA PORTE header, recipient company name, summary box (Total Billed, Total Paid, Balance Remaining), color-coded financial data
-  - **Payment Reports:** A TA PORTE header, payment history table, total payments summary, sorted by date (newest first)
-  - Both reports use professional formatting with jsPDF and jspdf-autotable
-  
-- **Input Validation:**
-  - Fixed decimal validation to allow 0 and small values like 0.1
-  - Removed restrictive min="0.01" constraint
-  - Supports edge cases for product costs and shipping
-  
-- **Technical Implementation:**
-  - Storage interface extended with payment methods: getAllPayments, getPayment, createPayment, deletePayment, getPaymentApplications
-  - Private autoDistributePayment helper method handles FIFO distribution logic
-  - Payment deletion properly reverses all applications before removing records
-  - API routes follow RESTful patterns with proper validation and error handling
+-   **Database:** Neon Database (PostgreSQL hosting)
+-   **ORM:** `drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`
+-   **Frontend Libraries:** `react`, `wouter`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers`, `@radix-ui/*`, `tailwindcss`, `class-variance-authority`, `lucide-react`
+-   **Date & PDF Generation:** `date-fns`, `jspdf`, `jspdf-autotable`
+-   **Development Tools:** `vite`, `@replit/vite-plugin-*`, `tsx`, `esbuild`
+-   **Fonts:** Google Fonts CDN (Inter font)

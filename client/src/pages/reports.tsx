@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type Expense } from "@shared/schema";
+import { calculateExpense } from "@shared/calculations";
+import { COMPANY_INFO } from "@shared/companyInfo";
 import { ExpenseTable } from "@/components/expense-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Receipt } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoUrl from "@assets/logo no background ready to use (1)_1760629728931.png";
 
 const CLIENTS = [
   "A TA PORTE",
@@ -52,18 +55,11 @@ export default function Reports() {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  const totalProductCost = filteredExpenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
-    0
-  );
-  const totalShippingCost = filteredExpenses.reduce(
-    (sum, exp) => sum + Number(exp.shippingCost),
-    0
-  );
-  const totalPaymentReceived = filteredExpenses.reduce(
-    (sum, exp) => sum + Number(exp.paymentReceived),
-    0
-  );
+  const calculations = filteredExpenses.map(exp => calculateExpense(exp));
+  
+  const totalProductCost = calculations.reduce((sum, calc) => sum + calc.productWithMarkup, 0);
+  const totalShippingCost = calculations.reduce((sum, calc) => sum + calc.shippingCost, 0);
+  const totalPaymentReceived = filteredExpenses.reduce((sum, exp) => sum + Number(exp.paymentReceived), 0);
   const grandTotal = totalProductCost + totalShippingCost;
   const balanceOwed = grandTotal - totalPaymentReceived;
 
@@ -140,17 +136,16 @@ export default function Reports() {
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'normal');
 
-    const tableData = sortedExpenses.map((exp) => {
-      const productWithMarkup = Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100);
-      const total = productWithMarkup + Number(exp.shippingCost);
+    const tableData = sortedExpenses.map((exp, idx) => {
+      const calc = calculations[filteredExpenses.indexOf(exp)];
       return [
         format(new Date(exp.date), "MMM dd, yyyy"),
         exp.client,
         exp.productDescription,
         exp.quantity,
-        `€${productWithMarkup.toFixed(2)}`,
-        `€${Number(exp.shippingCost).toFixed(2)}`,
-        `€${total.toFixed(2)}`,
+        `€${calc.productWithMarkup.toFixed(2)}`,
+        `€${calc.shippingCost.toFixed(2)}`,
+        `€${calc.total.toFixed(2)}`,
         exp.status,
       ];
     });
