@@ -5,13 +5,15 @@
 A web-based expense tracking application designed for France-based e-commerce fulfillment businesses to track product and shipping costs. The application allows users to record expenses with product descriptions, costs, and shipping company information, view dashboard analytics, and generate monthly PDF reports for client billing in Euros.
 
 **Key Features:**
-- Expense entry and management (CRUD operations) with persistent PostgreSQL storage
-- Track who paid for shipping: A TA PORTE, BEST DEAT, or custom shipping companies
-- All amounts displayed in Euros (€) for France-based business
-- Real-time dashboard with monthly statistics
-- Monthly report generation with PDF export (including Paid By information)
-- Light/dark theme support
-- Responsive Material Design interface
+- Comprehensive expense tracking with quantity, status, shipping carrier, and payment tracking
+- Client-based organization with tabs: A TA PORTE, BEST DEAL, LE PHÉNICIEN, LE GRAND MARCHÉ DE FRANCE
+- Automatic markup calculation (5% default, adjustable per expense)
+- Client-specific shipping costs (BEST DEAL auto-set to €3.15)
+- Real-time dashboard with monthly statistics and per-client balance tracking
+- Payment tracking showing amounts owed vs. paid per client
+- Monthly report generation with comprehensive PDF export
+- Light/dark theme support with Material Design interface
+- All amounts in Euros (€) for France-based business operations
 
 ## User Preferences
 
@@ -53,7 +55,7 @@ Preferred communication style: Simple, everyday language.
 **API Structure:**
 - `GET /api/expenses` - Fetch all expenses
 - `GET /api/expenses/:id` - Fetch single expense
-- `POST /api/expenses` - Create new expense (requires: date, productDescription, productCost, parcelCost, paidBy)
+- `POST /api/expenses` - Create new expense (requires: date, client, productDescription, quantity, productCost, markupPercentage, shippingCost, shippingCarrier, status, paymentReceived, notes)
 - `DELETE /api/expenses/:id` - Delete expense
 
 **Data Validation:**
@@ -77,10 +79,16 @@ Preferred communication style: Simple, everyday language.
 - Expenses table with fields:
   - id (UUID varchar, primary key, auto-generated)
   - date (timestamp, required)
+  - client (text, required) - Client company: "A TA PORTE", "BEST DEAL", "LE PHÉNICIEN", "LE GRAND MARCHÉ DE FRANCE"
   - productDescription (text, required)
-  - productCost (decimal 10,2, required)
-  - parcelCost (decimal 10,2, required)
-  - paidBy (text, required) - Shipping company: "A TA PORTE", "BEST DEAT", or custom entry
+  - quantity (text, required) - Quantity of items
+  - productCost (decimal 10,2, required) - Base product cost
+  - markupPercentage (decimal 5,2, required, default 5) - Markup percentage
+  - shippingCost (decimal 10,2, required) - Shipping cost (auto-set to 3.15 for BEST DEAL)
+  - shippingCarrier (text, required, default "Colissimo") - Shipping company
+  - status (text, required, default "Shipped") - Shipment status: Shipped, Cancelled, Refund, Pending, Processing
+  - paymentReceived (decimal 10,2, required, default 0) - Amount paid by client
+  - notes (text, nullable) - Optional notes
   - createdAt (timestamp, auto-generated)
 
 **ORM Configuration:**
@@ -116,19 +124,46 @@ Preferred communication style: Simple, everyday language.
 - Google Fonts CDN (Inter font family)
 - Neon Database PostgreSQL hosting (active, connection via DATABASE_URL environment variable)
 
-### Recent Changes (October 2025)
+### Recent Changes (October 16, 2025)
 
-**Currency Update:**
-- Changed from USD ($) to Euros (€) throughout the entire application
-- All cost displays, calculations, and PDF reports now use € symbol
+**Major Feature Update - Comprehensive Expense Tracking:**
 
-**Paid By Feature:**
-- Added "Paid By" field to track shipping company/payer
-- Dropdown options: "A TA PORTE", "BEST DEAT"
-- Custom entry option for other shipping companies
-- Displayed in expense tables and included in PDF reports
+**Client Management:**
+- Added four client companies: A TA PORTE, BEST DEAL, LE PHÉNICIEN, LE GRAND MARCHÉ DE FRANCE
+- Client tabs on Expenses page for filtering by client
+- Client-specific shipping cost automation (BEST DEAL = €3.15)
 
-**Database Migration:**
-- Migrated from in-memory storage to PostgreSQL database
-- Data now persists permanently across sessions
-- Schema includes paidBy field for shipping company tracking
+**Enhanced Expense Fields:**
+- Quantity tracking for multiple items per expense
+- Markup percentage with 5% default (adjustable per expense)
+- Automatic product cost with markup calculation
+- Shipping carrier selection (default: Colissimo, or custom)
+- Status tracking: Shipped, Cancelled, Refund, Pending, Processing
+- Payment tracking: record amounts received from clients
+- Notes field for additional information
+
+**Dashboard Enhancements:**
+- Client balance cards showing per-client totals, payments, and balances owed
+- Four-stat overview: Product Costs, Shipping Costs, Total Expenses, Balance Owed
+- Recent expenses table with all new fields
+
+**Expense Table Updates:**
+- Displays: Client, Product, Quantity, Status (with color badges), Product+Markup, Shipping, Total, Paid, Balance
+- Color-coded status indicators (green for Shipped, red for Cancelled, etc.)
+- Balance tracking showing amounts owed in red, payments in green
+
+**Report Improvements:**
+- PDF exports include all new columns: Client, Product, Qty, Product+Markup, Shipping, Total, Status
+- Monthly totals with comprehensive breakdown
+
+**Business Logic:**
+- Total = Product Cost × (1 + Markup%) + Shipping Cost
+- Balance = Total - Payment Received
+- BEST DEAL automatically gets €3.15 shipping cost
+- All amounts calculated and displayed in Euros (€)
+
+**Database Schema:**
+- Replaced "paidBy" with "client" field for client company tracking
+- Replaced "parcelCost" with "shippingCost" for clarity
+- Added: quantity, markupPercentage, shippingCarrier, status, paymentReceived, notes
+- All decimal fields use (10,2) precision for accurate Euro calculations
