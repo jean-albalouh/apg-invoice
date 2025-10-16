@@ -95,7 +95,9 @@ export default function Expenses() {
       <AddExpenseDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSubmit={(data) => createMutation.mutateAsync(data)}
+        onSubmit={async (data) => {
+          await createMutation.mutateAsync(data);
+        }}
       />
     </div>
   );

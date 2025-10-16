@@ -16,9 +16,10 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
   createdAt: true,
 }).extend({
-  date: z.string().or(z.date()),
-  productCost: z.number().positive("Product cost must be positive"),
-  parcelCost: z.number().positive("Parcel cost must be positive"),
+  date: z.string().or(z.date()).transform((val) => new Date(val)),
+  productDescription: z.string().min(1, "Product description is required"),
+  productCost: z.number().min(0.01, "Product cost must be greater than 0"),
+  parcelCost: z.number().min(0.01, "Parcel cost must be greater than 0"),
 });
 
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;

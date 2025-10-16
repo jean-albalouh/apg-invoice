@@ -39,8 +39,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
     defaultValues: {
       date: new Date(),
       productDescription: "",
-      productCost: 0,
-      parcelCost: 0,
+      productCost: undefined as any,
+      parcelCost: undefined as any,
     },
   });
 
@@ -51,8 +51,8 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
       form.reset({
         date: new Date(),
         productDescription: "",
-        productCost: 0,
-        parcelCost: 0,
+        productCost: undefined as any,
+        parcelCost: undefined as any,
       });
       onOpenChange(false);
     } finally {
@@ -98,7 +98,11 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                       <Calendar
                         mode="single"
                         selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                          }
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -140,12 +144,15 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                         <Input
                           type="number"
                           step="0.01"
-                          min="0"
+                          min="0.01"
                           placeholder="0.00"
                           className="pl-7 tabular-nums"
                           data-testid="input-product-cost"
                           value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.valueAsNumber;
+                            field.onChange(isNaN(val) ? undefined : val);
+                          }}
                         />
                       </div>
                     </FormControl>
@@ -166,12 +173,15 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                         <Input
                           type="number"
                           step="0.01"
-                          min="0"
+                          min="0.01"
                           placeholder="0.00"
                           className="pl-7 tabular-nums"
                           data-testid="input-parcel-cost"
                           value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.valueAsNumber;
+                            field.onChange(isNaN(val) ? undefined : val);
+                          }}
                         />
                       </div>
                     </FormControl>
