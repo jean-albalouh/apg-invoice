@@ -16,11 +16,20 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const CLIENTS = [
+  "A TA PORTE",
+  "BEST DEAL",
+  "LE PHÉNICIEN",
+  "LE GRAND MARCHÉ DE FRANCE",
+] as const;
+
 export default function Reports() {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(
     `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`
   );
+  const [reportType, setReportType] = useState<"full" | "company">("full");
+  const [selectedCompany, setSelectedCompany] = useState<string>(CLIENTS[0]);
 
   const { data: expenses = [] } = useQuery<Expense[]>({
     queryKey: ["/api/expenses"],
@@ -30,10 +39,14 @@ export default function Reports() {
   const monthStart = startOfMonth(new Date(year, month - 1));
   const monthEnd = endOfMonth(new Date(year, month - 1));
 
-  const filteredExpenses = expenses.filter((exp) => {
+  const monthFilteredExpenses = expenses.filter((exp) => {
     const expDate = new Date(exp.date);
     return expDate >= monthStart && expDate <= monthEnd;
   });
+
+  const filteredExpenses = reportType === "company" 
+    ? monthFilteredExpenses.filter(exp => exp.client === selectedCompany)
+    : monthFilteredExpenses;
 
   const sortedExpenses = [...filteredExpenses].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -74,6 +87,11 @@ export default function Reports() {
 
     doc.setFontSize(12);
     doc.text(format(monthStart, "MMMM yyyy"), 14, 32);
+    
+    if (reportType === "company") {
+      doc.setFontSize(14);
+      doc.text(`For: ${selectedCompany}`, 14, 42);
+    }
 
     const tableData = sortedExpenses.map((exp) => {
       const productWithMarkup = Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100);
@@ -105,13 +123,15 @@ export default function Reports() {
           "",
         ],
       ],
-      startY: 40,
+      startY: reportType === "company" ? 50 : 40,
       theme: "striped",
       headStyles: { fillColor: [33, 150, 243] },
       footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
     });
 
-    const fileName = `expense-report-${format(monthStart, "yyyy-MM")}.pdf`;
+    const fileName = reportType === "company"
+      ? `expense-report-${selectedCompany.toLowerCase().replace(/\s+/g, '-')}-${format(monthStart, "yyyy-MM")}.pdf`
+      : `expense-report-${format(monthStart, "yyyy-MM")}.pdf`;
     doc.save(fileName);
   };
 
@@ -124,7 +144,32 @@ export default function Reports() {
             Generate and export expense reports for client billing
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={reportType} onValueChange={(value: "full" | "company") => setReportType(value)}>
+            <SelectTrigger className="w-[180px]" data-testid="select-report-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="full">Full Report (All)</SelectItem>
+              <SelectItem value="company">Per Company</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {reportType === "company" && (
+            <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+              <SelectTrigger className="w-[200px]" data-testid="select-company">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CLIENTS.map((client) => (
+                  <SelectItem key={client} value={client}>
+                    {client}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-[180px]" data-testid="select-month">
               <SelectValue />
@@ -183,14 +228,16 @@ export default function Reports() {
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Expense Details</h3>
+          <h3 className="text-lg font-semibold">
+            {reportType === "company" ? `${selectedCompany} - Expense Details` : "Expense Details"}
+          </h3>
           <Button
             onClick={handleExportPDF}
             disabled={filteredExpenses.length === 0}
             data-testid="button-export-pdf"
           >
             <Download className="mr-2 h-4 w-4" />
-            Export PDF
+            {reportType === "company" ? `Export for ${selectedCompany}` : "Export Full Report"}
           </Button>
         </div>
         <ExpenseTable expenses={sortedExpenses} showActions={false} />

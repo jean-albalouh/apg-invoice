@@ -27,10 +27,11 @@ import {
 interface ExpenseTableProps {
   expenses: Expense[];
   onDelete?: (id: string) => void;
+  onEdit?: (expense: Expense) => void;
   showActions?: boolean;
 }
 
-export function ExpenseTable({ expenses, onDelete, showActions = true }: ExpenseTableProps) {
+export function ExpenseTable({ expenses, onDelete, onEdit, showActions = true }: ExpenseTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const totalProductCost = expenses.reduce(
@@ -150,6 +151,18 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
                   {showActions && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            data-testid={`button-edit-${expense.id}`}
+                            onClick={() => onEdit(expense)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

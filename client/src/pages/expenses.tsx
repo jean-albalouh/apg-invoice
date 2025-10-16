@@ -14,12 +14,13 @@ const CLIENTS = [
   { value: "A TA PORTE", label: "A TA PORTE" },
   { value: "BEST DEAL", label: "BEST DEAL" },
   { value: "LE PHÉNICIEN", label: "LE PHÉNICIEN" },
-  { value: "LE GRAND MARCHÉ DE FRANCE", label: "LE GRAND MARCHÉ DE FRANCE" },
+  { value: "LE GRAND MARCHÉ DE FRANCE", label: "GRAND MARCHÉ" },
 ] as const;
 
 export default function Expenses() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState("all");
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const { toast } = useToast();
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
@@ -41,6 +42,26 @@ export default function Expenses() {
       toast({
         title: "Error",
         description: "Failed to add expense",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertExpense }) => {
+      return await apiRequest("PATCH", `/api/expenses/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      toast({
+        title: "Success",
+        description: "Expense updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update expense",
         variant: "destructive",
       });
     },
@@ -114,21 +135,70 @@ export default function Expenses() {
           ))}
         </TabsList>
 
-        {CLIENTS.map((client) => (
-          <TabsContent key={client.value} value={client.value} className="space-y-4">
-            <ExpenseTable
-              expenses={client.value === "all" ? sortedExpenses : sortedExpenses.filter(exp => exp.client === client.value)}
-              onDelete={(id) => deleteMutation.mutate(id)}
-            />
-          </TabsContent>
-        ))}
+        {CLIENTS.map((client) => {
+          const clientExpenses = client.value === "all" 
+            ? sortedExpenses 
+            : sortedExpenses.filter(exp => exp.client === client.value);
+          
+          const totalBilled = clientExpenses.reduce(
+            (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100) + Number(exp.shippingCost),
+            0
+          );
+          const totalPaid = clientExpenses.reduce((sum, exp) => sum + Number(exp.paymentReceived), 0);
+          const balance = totalBilled - totalPaid;
+          const orderCount = clientExpenses.length;
+
+          return (
+            <TabsContent key={client.value} value={client.value} className="space-y-4">
+              {client.value !== "all" && orderCount > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-card rounded-md border p-4">
+                    <p className="text-sm text-muted-foreground">Orders</p>
+                    <p className="text-2xl font-semibold mt-1">{orderCount}</p>
+                  </div>
+                  <div className="bg-card rounded-md border p-4">
+                    <p className="text-sm text-muted-foreground">Total Billed</p>
+                    <p className="text-2xl font-semibold mt-1">€{totalBilled.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-card rounded-md border p-4">
+                    <p className="text-sm text-muted-foreground">Total Paid</p>
+                    <p className="text-2xl font-semibold mt-1 text-green-600 dark:text-green-400">€{totalPaid.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-card rounded-md border p-4">
+                    <p className="text-sm text-muted-foreground">Balance Owed</p>
+                    <p className="text-2xl font-semibold mt-1 text-red-600 dark:text-red-400">€{balance.toFixed(2)}</p>
+                  </div>
+                </div>
+              )}
+              <ExpenseTable
+                expenses={clientExpenses}
+                onEdit={(expense) => {
+                  setEditingExpense(expense);
+                  setDialogOpen(true);
+                }}
+                onDelete={(id) => deleteMutation.mutate(id)}
+              />
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       <AddExpenseDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={async (data) => {
-          await createMutation.mutateAsync(data);
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingExpense(null);
+          }
+        }}
+        editExpense={editingExpense}
+        onSubmit={async (data, id) => {
+          if (id) {
+            await updateMutation.mutateAsync({ id, data });
+          } else {
+            await createMutation.mutateAsync(data);
+          }
+          setEditingExpense(null);
         }}
       />
     </div>

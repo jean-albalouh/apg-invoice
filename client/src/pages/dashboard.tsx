@@ -118,39 +118,80 @@ export default function Dashboard() {
       </div>
 
       {clientBalances.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Client Balances</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {clientBalances.map((cb) => (
-              <Card key={cb.client} className="hover-elevate">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {cb.client}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="text-2xl font-bold tabular-nums" data-testid={`text-client-balance-${cb.client.toLowerCase().replace(/\s+/g, '-')}`}>
-                    €{cb.balance.toFixed(2)}
-                  </div>
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Total:</span>
-                      <span className="tabular-nums">€{cb.total.toFixed(2)}</span>
+        <>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-semibold">A TA PORTE Financial Overview</h3>
+              <p className="text-sm text-muted-foreground mt-1">Track amounts paid to and received from each company</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {clientBalances.map((cb) => (
+                <Card key={cb.client} className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {cb.client}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Paid Out (A TA PORTE)</p>
+                      <p className="text-lg font-semibold tabular-nums text-red-600 dark:text-red-400">
+                        €{cb.total.toFixed(2)}
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Paid:</span>
-                      <span className="tabular-nums text-green-600 dark:text-green-400">€{cb.paid.toFixed(2)}</span>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Received From Company</p>
+                      <p className="text-lg font-semibold tabular-nums text-green-600 dark:text-green-400">
+                        €{cb.paid.toFixed(2)}
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Orders:</span>
-                      <span>{cb.count}</span>
+                    <div className="space-y-1 pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">Balance</p>
+                      <p className="text-xl font-bold tabular-nums" data-testid={`text-ata-balance-${cb.client.toLowerCase().replace(/\s+/g, '-')}`}>
+                        €{cb.balance.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{cb.count} orders</p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Client Payment Status</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {clientBalances.map((cb) => (
+                <Card key={cb.client} className="hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {cb.client}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="text-2xl font-bold tabular-nums" data-testid={`text-client-balance-${cb.client.toLowerCase().replace(/\s+/g, '-')}`}>
+                      €{cb.balance.toFixed(2)}
+                    </div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Total:</span>
+                        <span className="tabular-nums">€{cb.total.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Paid:</span>
+                        <span className="tabular-nums text-green-600 dark:text-green-400">€{cb.paid.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Orders:</span>
+                        <span>{cb.count}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="space-y-4">

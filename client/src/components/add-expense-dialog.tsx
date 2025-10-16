@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertExpenseSchema, type InsertExpense } from "@shared/schema";
+import { insertExpenseSchema, type InsertExpense, type Expense } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,7 +36,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: InsertExpense) => Promise<void>;
+  onSubmit: (data: InsertExpense, id?: string) => Promise<void>;
+  editExpense?: Expense | null;
 }
 
 const CLIENTS = [
@@ -54,9 +55,10 @@ const STATUS_OPTIONS = [
   "Processing",
 ] as const;
 
-export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: AddExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomCarrier, setShowCustomCarrier] = useState(false);
+  const [showCustomStatus, setShowCustomStatus] = useState(false);
 
   const form = useForm<InsertExpense>({
     resolver: zodResolver(insertExpenseSchema),
@@ -75,17 +77,61 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
     },
   });
 
+  useEffect(() => {
+    if (editExpense && open) {
+      const isCustomCarrier = !["Colissimo"].includes(editExpense.shippingCarrier);
+      const isCustomStatus = !STATUS_OPTIONS.includes(editExpense.status as any);
+      
+      setShowCustomCarrier(isCustomCarrier);
+      setShowCustomStatus(isCustomStatus);
+      
+      form.reset({
+        date: new Date(editExpense.date),
+        client: editExpense.client,
+        productDescription: editExpense.productDescription,
+        quantity: editExpense.quantity,
+        productCost: Number(editExpense.productCost),
+        markupPercentage: Number(editExpense.markupPercentage),
+        shippingCost: Number(editExpense.shippingCost),
+        shippingCarrier: editExpense.shippingCarrier,
+        status: editExpense.status,
+        paymentReceived: Number(editExpense.paymentReceived),
+        notes: editExpense.notes || "",
+      });
+    } else if (!editExpense && open) {
+      setShowCustomCarrier(false);
+      setShowCustomStatus(false);
+      form.reset({
+        date: new Date(),
+        client: "",
+        productDescription: "",
+        quantity: "1",
+        productCost: undefined as any,
+        markupPercentage: 5,
+        shippingCost: undefined as any,
+        shippingCarrier: "Colissimo",
+        status: "Shipped",
+        paymentReceived: 0,
+        notes: "",
+      });
+    }
+  }, [editExpense, open, form]);
+
   const selectedClient = form.watch("client");
   const productCost = form.watch("productCost") || 0;
   const markupPercentage = form.watch("markupPercentage") || 0;
   const shippingCost = form.watch("shippingCost") || 0;
 
-  // Auto-set shipping cost based on client
+  // Auto-set shipping cost based on client (only for new expenses, not edits)
   useEffect(() => {
-    if (selectedClient === "BEST DEAL") {
-      form.setValue("shippingCost", 3.15);
+    if (selectedClient === "BEST DEAL" && !editExpense) {
+      const currentShippingCost = form.getValues("shippingCost");
+      // Only set if field is empty/undefined (new expense)
+      if (currentShippingCost === undefined || currentShippingCost === null || currentShippingCost === 0 || Number.isNaN(currentShippingCost)) {
+        form.setValue("shippingCost", 3.15);
+      }
     }
-  }, [selectedClient, form]);
+  }, [selectedClient, form, editExpense]);
 
   const productCostWithMarkup = Number(productCost) * (1 + Number(markupPercentage) / 100);
   const total = productCostWithMarkup + Number(shippingCost);
@@ -93,7 +139,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
   const handleSubmit = async (data: InsertExpense) => {
     try {
       setIsSubmitting(true);
-      await onSubmit(data);
+      await onSubmit(data, editExpense?.id);
       form.reset({
         date: new Date(),
         client: "",
@@ -108,6 +154,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
         notes: "",
       });
       setShowCustomCarrier(false);
+      setShowCustomStatus(false);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -118,7 +165,9 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Add New Expense</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            {editExpense ? "Edit Expense" : "Add New Expense"}
+          </DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
           <Form {...form}>
@@ -379,20 +428,52 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Status</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-status">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {STATUS_OPTIONS.map((status) => (
-                            <SelectItem key={status} value={status} data-testid={`option-status-${status.toLowerCase()}`}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        {showCustomStatus ? (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter custom status..."
+                              data-testid="input-custom-status"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setShowCustomStatus(false);
+                                field.onChange("Shipped");
+                              }}
+                              data-testid="button-cancel-custom-status"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              if (value === "custom") {
+                                setShowCustomStatus(true);
+                                field.onChange("");
+                              } else {
+                                field.onChange(value);
+                              }
+                            }}
+                          >
+                            <SelectTrigger data-testid="select-status">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((status) => (
+                                <SelectItem key={status} value={status} data-testid={`option-status-${status.toLowerCase()}`}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="custom">Other (Custom)...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -449,8 +530,16 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
 
               <div className="bg-muted/50 rounded-md p-4 space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Product Cost with Markup</span>
-                  <span className="font-medium tabular-nums">€{productCostWithMarkup.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Product Cost</span>
+                  <span className="font-medium tabular-nums">€{Number(productCost).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Markup ({markupPercentage}%)</span>
+                  <span className="font-medium tabular-nums">€{(Number(productCost) * Number(markupPercentage) / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t pt-2">
+                  <span className="text-muted-foreground">Product + Markup</span>
+                  <span className="font-semibold tabular-nums">€{productCostWithMarkup.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Shipping Cost</span>
@@ -475,7 +564,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting} data-testid="button-save-expense">
-                  {isSubmitting ? "Saving..." : "Save Expense"}
+                  {isSubmitting ? "Saving..." : editExpense ? "Update Expense" : "Save Expense"}
                 </Button>
               </div>
             </form>
