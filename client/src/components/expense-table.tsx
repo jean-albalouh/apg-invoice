@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { type Expense } from "@shared/schema";
+import { calculateExpense } from "@shared/calculations";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -34,19 +35,12 @@ interface ExpenseTableProps {
 export function ExpenseTable({ expenses, onDelete, onEdit, showActions = true }: ExpenseTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const totalProductCost = expenses.reduce(
-    (sum, exp) => sum + Number(exp.productCost) * (1 + Number(exp.markupPercentage) / 100),
-    0
-  );
-  const totalShippingCost = expenses.reduce(
-    (sum, exp) => sum + Number(exp.shippingCost),
-    0
-  );
-  const totalPaymentReceived = expenses.reduce(
-    (sum, exp) => sum + Number(exp.paymentReceived),
-    0
-  );
-  const grandTotal = totalProductCost + totalShippingCost;
+  const calculations = expenses.map(exp => calculateExpense(exp));
+  
+  const totalProductWithMarkup = calculations.reduce((sum, calc) => sum + calc.productWithMarkup, 0);
+  const totalShippingCost = calculations.reduce((sum, calc) => sum + calc.shippingCost, 0);
+  const totalPaymentReceived = expenses.reduce((sum, exp) => sum + Number(exp.paymentReceived), 0);
+  const grandTotal = totalProductWithMarkup + totalShippingCost;
   const balanceOwed = grandTotal - totalPaymentReceived;
 
   const handleDelete = () => {
@@ -105,85 +99,88 @@ export function ExpenseTable({ expenses, onDelete, onEdit, showActions = true }:
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses.map((expense) => (
-                <TableRow 
-                  key={expense.id} 
-                  className="hover-elevate"
-                  data-testid={`row-expense-${expense.id}`}
-                >
-                  <TableCell className="font-medium">
-                    {format(new Date(expense.date), "MMM dd, yyyy")}
-                  </TableCell>
-                  <TableCell className="font-medium" data-testid={`text-client-${expense.id}`}>
-                    {expense.client}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="line-clamp-2">{expense.productDescription}</div>
-                  </TableCell>
-                  <TableCell className="font-medium">{expense.quantity}</TableCell>
-                  <TableCell>
-                    <span className={cn(
-                      "px-2 py-1 rounded text-xs font-medium",
-                      expense.status === "Shipped" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100",
-                      expense.status === "Cancelled" && "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100",
-                      expense.status === "Refund" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-100",
-                      expense.status === "Pending" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100",
-                      expense.status === "Processing" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100",
-                    )}>
-                      {expense.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    €{(Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100)).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    €{Number(expense.shippingCost).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold">
-                    €{(Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100) + Number(expense.shippingCost)).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-green-600 dark:text-green-400">
-                    €{Number(expense.paymentReceived).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold text-red-600 dark:text-red-400">
-                    €{((Number(expense.productCost) * (1 + Number(expense.markupPercentage) / 100) + Number(expense.shippingCost)) - Number(expense.paymentReceived)).toFixed(2)}
-                  </TableCell>
-                  {showActions && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {onEdit && (
+              {expenses.map((expense, index) => {
+                const calc = calculations[index];
+                return (
+                  <TableRow 
+                    key={expense.id} 
+                    className="hover-elevate"
+                    data-testid={`row-expense-${expense.id}`}
+                  >
+                    <TableCell className="font-medium">
+                      {format(new Date(expense.date), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell className="font-medium" data-testid={`text-client-${expense.id}`}>
+                      {expense.client}
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="line-clamp-2">{expense.productDescription}</div>
+                    </TableCell>
+                    <TableCell className="font-medium">{expense.quantity}</TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        "px-2 py-1 rounded text-xs font-medium",
+                        expense.status === "Shipped" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100",
+                        expense.status === "Cancelled" && "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100",
+                        expense.status === "Refund" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-100",
+                        expense.status === "Pending" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100",
+                        expense.status === "Processing" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100",
+                      )}>
+                        {expense.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      €{calc.productWithMarkup.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      €{calc.shippingCost.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">
+                      €{calc.total.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-green-600 dark:text-green-400">
+                      €{Number(expense.paymentReceived).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold text-red-600 dark:text-red-400">
+                      €{calc.balance.toFixed(2)}
+                    </TableCell>
+                    {showActions && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {onEdit && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              data-testid={`button-edit-${expense.id}`}
+                              onClick={() => onEdit(expense)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            data-testid={`button-edit-${expense.id}`}
-                            onClick={() => onEdit(expense)}
+                            data-testid={`button-delete-${expense.id}`}
+                            onClick={() => setDeleteId(expense.id)}
                           >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          data-testid={`button-delete-${expense.id}`}
-                          onClick={() => setDeleteId(expense.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
             </TableBody>
             <TableFooter>
               <TableRow className="bg-muted/50">
                 <TableCell colSpan={5} className="font-semibold">Totals</TableCell>
                 <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-product-cost">
-                  €{totalProductCost.toFixed(2)}
+                  €{totalProductWithMarkup.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-shipping-cost">
                   €{totalShippingCost.toFixed(2)}
