@@ -44,6 +44,7 @@ Preferred communication style: Simple, everyday language.
 -   **Client Management:** Client-based organization (A TA PORTE, BEST DEAL, LE PHÉNICIEN, GRAND MARCHÉ) with statutory company information (SIREN, TVA, address, phone).
 -   **Payment System:** Dedicated payments page to record payments, which auto-distribute to the oldest unpaid expenses (FIFO). Payments can be deleted, reversing applications.
 -   **Reporting:** Monthly PDF reports (full consolidated or per-company) with A TA PORTE header, financial summaries (Total Billed, Paid, Balance), and payment history exports.
+-   **French Invoicing (Factures):** Professional French invoice generation with date-based numbering (YYYY-MM-NNN format, auto-increments per month), complete statutory information (SIREN, TVA intracommunautaire, addresses, phone numbers), detailed HT/TVA/TTC breakdown tables, TVA summary by rate (includes markup), payment terms, and compliance with French invoicing regulations. Accessible via "Générer Facture" button on company-specific reports.
 -   **Dashboard Analytics:** Real-time monthly statistics, per-client balance tracking, and "A TA PORTE Financial Overview" showing paid out vs. received from each company.
 -   **Dynamic Inputs:** Custom status and shipping carrier text input alongside predefined choices.
 -   **Auto-fill Logic:** BEST DEAL shipping cost auto-fills to €3.15 for *new* entries only when empty.
