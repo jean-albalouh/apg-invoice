@@ -220,11 +220,13 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
 
   const tvaSummaryEndY = (doc as any).lastAutoTable.finalY || finalY + 15;
 
-  // Totals Box
+  // Totals Box (dynamic height based on payment status)
   const totalsY = tvaSummaryEndY + 15;
+  const boxHeight = data.totalPaid > 0 ? 55 : 40; // Taller box if payment info exists
+  
   doc.setDrawColor(52, 73, 94);
   doc.setLineWidth(0.5);
-  doc.rect(120, totalsY, 75, 40);
+  doc.rect(120, totalsY, 75, boxHeight);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -248,15 +250,15 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
     const balance = grandTotal - data.totalPaid;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`Montant payé: €${data.totalPaid.toFixed(2)}`, 125, totalsY + 36);
+    doc.text(`Montant payé: €${data.totalPaid.toFixed(2)}`, 125, totalsY + 38);
     
     if (balance > 0) {
       doc.setTextColor(200, 0, 0);
-      doc.text(`Solde dû: €${balance.toFixed(2)}`, 125, totalsY + 42);
+      doc.text(`Solde dû: €${balance.toFixed(2)}`, 125, totalsY + 46);
       doc.setTextColor(0, 0, 0);
     } else {
       doc.setTextColor(0, 150, 0);
-      doc.text("PAYÉ", 125, totalsY + 42);
+      doc.text("PAYÉ", 125, totalsY + 46);
       doc.setTextColor(0, 0, 0);
     }
   }

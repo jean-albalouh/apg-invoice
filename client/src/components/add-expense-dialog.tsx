@@ -323,8 +323,13 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit, editExpense }: 
                             data-testid="input-product-cost"
                             value={field.value || ""}
                             onChange={(e) => {
-                              const val = e.target.valueAsNumber;
-                              field.onChange(isNaN(val) ? undefined : val);
+                              const inputValue = e.target.value;
+                              if (inputValue === '') {
+                                field.onChange(undefined);
+                              } else {
+                                const val = e.target.valueAsNumber;
+                                field.onChange(isNaN(val) ? undefined : val);
+                              }
                             }}
                           />
                         </div>
