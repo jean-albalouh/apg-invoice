@@ -14,6 +14,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/invoice-numbers", async (_req, res) => {
+    try {
+      const invoiceNumbers = await storage.getAllInvoiceNumbers();
+      res.json(invoiceNumbers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invoice numbers" });
+    }
+  });
+
   app.get("/api/expenses/:id", async (req, res) => {
     try {
       const expense = await storage.getExpense(req.params.id);

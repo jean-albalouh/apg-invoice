@@ -17,6 +17,7 @@ export interface IStorage {
   createExpense(expense: InsertExpense): Promise<Expense>;
   updateExpense(id: string, expense: InsertExpense): Promise<Expense | undefined>;
   deleteExpense(id: string): Promise<boolean>;
+  getAllInvoiceNumbers(): Promise<string[]>;
   
   // Payment methods
   getAllPayments(): Promise<Payment[]>;
@@ -68,6 +69,16 @@ export class DatabaseStorage implements IStorage {
   async deleteExpense(id: string): Promise<boolean> {
     const result = await db.delete(expenses).where(eq(expenses.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getAllInvoiceNumbers(): Promise<string[]> {
+    const result = await db
+      .select({ invoiceNumber: expenses.invoiceNumber })
+      .from(expenses);
+    
+    return result
+      .map(r => r.invoiceNumber)
+      .filter((num): num is string => num !== null && num !== undefined);
   }
 
   // Payment methods

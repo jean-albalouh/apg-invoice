@@ -18,6 +18,8 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/logo no background ready to use (1)_1760629728931.png";
+import { generateFrenchInvoice } from "@/utils/invoiceGenerator";
+import { generateInvoiceNumber } from "@shared/invoiceUtils";
 
 const CLIENTS = [
   "A TA PORTE",
@@ -36,6 +38,10 @@ export default function Reports() {
 
   const { data: expenses = [] } = useQuery<Expense[]>({
     queryKey: ["/api/expenses"],
+  });
+
+  const { data: invoiceNumbers = [] } = useQuery<string[]>({
+    queryKey: ["/api/invoice-numbers"],
   });
 
   const [year, month] = selectedMonth.split("-").map(Number);
@@ -179,6 +185,34 @@ export default function Reports() {
     doc.save(fileName);
   };
 
+  const handleExportFrenchInvoice = () => {
+    if (reportType !== "company") {
+      alert("Veuillez sélectionner une compagnie pour générer une facture");
+      return;
+    }
+
+    // Generate invoice number
+    const invoiceNumber = generateInvoiceNumber(invoiceNumbers, monthStart);
+
+    // Calculate total paid for the selected company
+    const totalPaid = sortedExpenses.reduce(
+      (sum, exp) => sum + Number(exp.paymentReceived),
+      0
+    );
+
+    // Generate French invoice
+    const doc = generateFrenchInvoice({
+      invoiceNumber: invoiceNumber.formatted,
+      invoiceDate: new Date(),
+      clientName: selectedCompany,
+      expenses: sortedExpenses,
+      totalPaid,
+    });
+
+    const fileName = `facture-${invoiceNumber.formatted}-${selectedCompany.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -275,14 +309,27 @@ export default function Reports() {
           <h3 className="text-lg font-semibold">
             {reportType === "company" ? `${selectedCompany} - Expense Details` : "Expense Details"}
           </h3>
-          <Button
-            onClick={handleExportPDF}
-            disabled={filteredExpenses.length === 0}
-            data-testid="button-export-pdf"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {reportType === "company" ? `Export for ${selectedCompany}` : "Export Full Report"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleExportPDF}
+              disabled={filteredExpenses.length === 0}
+              data-testid="button-export-pdf"
+              variant="outline"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {reportType === "company" ? "Export Report" : "Export Full Report"}
+            </Button>
+            {reportType === "company" && (
+              <Button
+                onClick={handleExportFrenchInvoice}
+                disabled={filteredExpenses.length === 0}
+                data-testid="button-export-invoice"
+              >
+                <Receipt className="mr-2 h-4 w-4" />
+                Générer Facture
+              </Button>
+            )}
+          </div>
         </div>
         <ExpenseTable expenses={sortedExpenses} showActions={false} />
       </div>

@@ -121,7 +121,7 @@ export function generateFrenchInvoice(data: InvoiceData): jsPDF {
           `€${calc.shippingCost.toFixed(2)}`,
           "0%",
           `€${calc.shippingCost.toFixed(2)}`,
-        ];
+        ]);
       }
     });
   }
