@@ -71,13 +71,38 @@ export default function Reports() {
 
   const generateMonthOptions = () => {
     const options = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const label = format(date, "MMMM yyyy");
-      options.push({ value, label });
+    const monthsWithExpenses = new Set<string>();
+    
+    // Find all unique months that have expenses
+    expenses.forEach(exp => {
+      const expDate = new Date(exp.date);
+      const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, "0")}`;
+      monthsWithExpenses.add(monthKey);
+    });
+    
+    // Convert to array and sort (newest first)
+    const sortedMonths = Array.from(monthsWithExpenses).sort((a, b) => b.localeCompare(a));
+    
+    // Create options from sorted months
+    sortedMonths.forEach(monthKey => {
+      const [year, month] = monthKey.split("-").map(Number);
+      const date = new Date(year, month - 1, 1);
+      options.push({
+        value: monthKey,
+        label: format(date, "MMMM yyyy")
+      });
+    });
+    
+    // If no expenses, show current month
+    if (options.length === 0) {
+      const now = new Date();
+      const value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      options.push({
+        value,
+        label: format(now, "MMMM yyyy")
+      });
     }
+    
     return options;
   };
 
