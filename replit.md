@@ -15,8 +15,12 @@ A web-based expense tracking application designed for France-based e-commerce fu
 - Real-time dashboard with monthly statistics and per-client balance tracking
 - **Enhanced company tabs** - Financial summary cards showing Orders, Total Billed, Paid, Balance per client
 - **A TA PORTE Financial Overview** - Dashboard showing Paid Out vs Received From each company
-- Payment tracking showing amounts owed vs. paid per client
+- **Payment recording system** - Dedicated Payments page to record client payments with auto-distribution
+- **Auto-payment distribution** - Payments automatically apply to oldest unpaid expenses (FIFO)
+- **Payment reversal** - Deleting a payment reverses all applications to expenses
 - **Flexible report generation** - Full consolidated report OR per-company reports with recipient name
+- **Enhanced PDF reports** - A TA PORTE header, company recipient, financial summary (Total Billed, Paid, Balance)
+- **Payment history PDF** - Export all payments with client, date, amount, notes
 - Light/dark theme support with Material Design interface
 - All amounts in Euros (€) for France-based business operations
 
@@ -63,6 +67,10 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/expenses` - Create new expense (requires: date, client, productDescription, quantity, productCost, markupPercentage, shippingCost, shippingCarrier, status, paymentReceived, notes)
 - `PATCH /api/expenses/:id` - Update existing expense (same fields as POST)
 - `DELETE /api/expenses/:id` - Delete expense
+- `GET /api/payments` - Fetch all payments (ordered by date desc)
+- `GET /api/payments/:id` - Fetch single payment with applications
+- `POST /api/payments` - Create payment with auto-distribution (requires: date, client, amount, notes)
+- `DELETE /api/payments/:id` - Delete payment and reverse all applications
 
 **Data Validation:**
 - Zod schemas for runtime validation
@@ -186,9 +194,45 @@ Preferred communication style: Simple, everyday language.
 - BEST DEAL automatically gets €3.15 shipping cost for NEW entries only
 - All amounts calculated and displayed in Euros (€)
 
-**Technical Implementation:**
-- Storage interface updated with `updateExpense` method
-- DatabaseStorage implements PATCH with validation
-- AddExpenseDialog supports both create and edit modes
-- useEffect guards prevent data corruption on edits
-- Report filtering logic handles both full and per-company views
+**Payment Recording System (October 16, 2025):**
+- **Database Schema Extensions:**
+  - Added `payments` table with fields: id, date, client, amount, notes, createdAt
+  - Added `payment_applications` junction table linking payments to expenses
+  - Tracks which payment amounts were applied to which expenses
+  
+- **Auto-Distribution Logic:**
+  - Payments automatically distribute to oldest unpaid expenses first (FIFO)
+  - Only applies to expenses for the same client
+  - Supports partial payments across multiple expenses
+  - Updates expense.paymentReceived field automatically
+  - Creates payment_application records to track distribution
+  
+- **Payment Reversal:**
+  - Deleting a payment reverses all applications
+  - Reduces expense.paymentReceived by applied amounts
+  - Removes payment_application records
+  - Maintains data integrity across the system
+  
+- **Payments Page (New):**
+  - 4-tab navigation: Dashboard, Expenses, Payments, Reports
+  - Record payment form with client selector, amount, date, notes
+  - Payment history table showing all recorded payments
+  - Total Payments Received summary card
+  - Delete payment with automatic reversal
+  - Export payment history to PDF
+  
+- **Enhanced PDF Reports:**
+  - **Expense Reports:** A TA PORTE header, recipient company name, summary box (Total Billed, Total Paid, Balance Remaining), color-coded financial data
+  - **Payment Reports:** A TA PORTE header, payment history table, total payments summary, sorted by date (newest first)
+  - Both reports use professional formatting with jsPDF and jspdf-autotable
+  
+- **Input Validation:**
+  - Fixed decimal validation to allow 0 and small values like 0.1
+  - Removed restrictive min="0.01" constraint
+  - Supports edge cases for product costs and shipping
+  
+- **Technical Implementation:**
+  - Storage interface extended with payment methods: getAllPayments, getPayment, createPayment, deletePayment, getPaymentApplications
+  - Private autoDistributePayment helper method handles FIFO distribution logic
+  - Payment deletion properly reverses all applications before removing records
+  - API routes follow RESTful patterns with proper validation and error handling

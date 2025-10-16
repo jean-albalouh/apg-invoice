@@ -97,7 +97,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePayment(id: string): Promise<boolean> {
-    // Delete payment applications first (foreign key constraint)
+    // Get all payment applications to reverse them
+    const applications = await db
+      .select()
+      .from(paymentApplications)
+      .where(eq(paymentApplications.paymentId, id));
+    
+    // Reverse payment applications: reduce expense.paymentReceived
+    for (const app of applications) {
+      const expense = await this.getExpense(app.expenseId);
+      if (expense) {
+        const currentPaymentReceived = Number(expense.paymentReceived);
+        const amountToReverse = Number(app.amountApplied);
+        const newPaymentReceived = currentPaymentReceived - amountToReverse;
+        
+        await db
+          .update(expenses)
+          .set({ paymentReceived: newPaymentReceived.toString() })
+          .where(eq(expenses.id, app.expenseId));
+      }
+    }
+    
+    // Delete payment applications
     await db.delete(paymentApplications).where(eq(paymentApplications.paymentId, id));
     
     // Delete the payment
