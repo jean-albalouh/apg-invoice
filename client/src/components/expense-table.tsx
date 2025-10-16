@@ -86,6 +86,7 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
               <TableRow className="bg-muted/50">
                 <TableHead className="font-semibold">Date</TableHead>
                 <TableHead className="font-semibold">Product Description</TableHead>
+                <TableHead className="font-semibold">Paid By</TableHead>
                 <TableHead className="font-semibold text-right">Product Cost</TableHead>
                 <TableHead className="font-semibold text-right">Parcel Cost</TableHead>
                 <TableHead className="font-semibold text-right">Total</TableHead>
@@ -105,14 +106,17 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
                   <TableCell className="max-w-md">
                     <div className="line-clamp-2">{expense.productDescription}</div>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    ${Number(expense.productCost).toFixed(2)}
+                  <TableCell className="font-medium" data-testid={`text-paid-by-${expense.id}`}>
+                    {expense.paidBy}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
-                    ${Number(expense.parcelCost).toFixed(2)}
+                    €{Number(expense.productCost).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    €{Number(expense.parcelCost).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
-                    ${(Number(expense.productCost) + Number(expense.parcelCost)).toFixed(2)}
+                    €{(Number(expense.productCost) + Number(expense.parcelCost)).toFixed(2)}
                   </TableCell>
                   {showActions && (
                     <TableCell className="text-right">
@@ -135,15 +139,15 @@ export function ExpenseTable({ expenses, onDelete, showActions = true }: Expense
             </TableBody>
             <TableFooter>
               <TableRow className="bg-muted/50">
-                <TableCell colSpan={2} className="font-semibold">Total</TableCell>
+                <TableCell colSpan={3} className="font-semibold">Total</TableCell>
                 <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-product-cost">
-                  ${totalProductCost.toFixed(2)}
+                  €{totalProductCost.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-semibold" data-testid="text-total-parcel-cost">
-                  ${totalParcelCost.toFixed(2)}
+                  €{totalParcelCost.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-semibold text-lg" data-testid="text-grand-total">
-                  ${grandTotal.toFixed(2)}
+                  €{grandTotal.toFixed(2)}
                 </TableCell>
                 {showActions && <TableCell />}
               </TableRow>

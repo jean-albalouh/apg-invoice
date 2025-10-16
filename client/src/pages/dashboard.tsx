@@ -58,21 +58,21 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatsCard
           title="Product Costs"
-          value={`$${totalProductCost.toFixed(2)}`}
+          value={`€${totalProductCost.toFixed(2)}`}
           icon={Package}
           trend={`${currentMonthExpenses.length} orders this month`}
           testId="stat-product-cost"
         />
         <StatsCard
           title="Shipping Costs"
-          value={`$${totalParcelCost.toFixed(2)}`}
+          value={`€${totalParcelCost.toFixed(2)}`}
           icon={Truck}
           trend={`${currentMonthExpenses.length} parcels shipped`}
           testId="stat-shipping-cost"
         />
         <StatsCard
           title="Total Expenses"
-          value={`$${totalExpenses.toFixed(2)}`}
+          value={`€${totalExpenses.toFixed(2)}`}
           icon={DollarSign}
           trend="Amount owed by client"
           testId="stat-total-expenses"

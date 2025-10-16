@@ -73,21 +73,23 @@ export default function Reports() {
     const tableData = sortedExpenses.map((exp) => [
       format(new Date(exp.date), "MMM dd, yyyy"),
       exp.productDescription,
-      `$${Number(exp.productCost).toFixed(2)}`,
-      `$${Number(exp.parcelCost).toFixed(2)}`,
-      `$${(Number(exp.productCost) + Number(exp.parcelCost)).toFixed(2)}`,
+      exp.paidBy,
+      `€${Number(exp.productCost).toFixed(2)}`,
+      `€${Number(exp.parcelCost).toFixed(2)}`,
+      `€${(Number(exp.productCost) + Number(exp.parcelCost)).toFixed(2)}`,
     ]);
 
     autoTable(doc, {
-      head: [["Date", "Product Description", "Product Cost", "Parcel Cost", "Total"]],
+      head: [["Date", "Product Description", "Paid By", "Product Cost", "Parcel Cost", "Total"]],
       body: tableData,
       foot: [
         [
           "Total",
           "",
-          `$${totalProductCost.toFixed(2)}`,
-          `$${totalParcelCost.toFixed(2)}`,
-          `$${grandTotal.toFixed(2)}`,
+          "",
+          `€${totalProductCost.toFixed(2)}`,
+          `€${totalParcelCost.toFixed(2)}`,
+          `€${grandTotal.toFixed(2)}`,
         ],
       ],
       startY: 40,
@@ -134,7 +136,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold tabular-nums" data-testid="report-product-cost">
-              ${totalProductCost.toFixed(2)}
+              €{totalProductCost.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -147,7 +149,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold tabular-nums" data-testid="report-shipping-cost">
-              ${totalParcelCost.toFixed(2)}
+              €{totalParcelCost.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -160,7 +162,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold tabular-nums text-primary" data-testid="report-total-due">
-              ${grandTotal.toFixed(2)}
+              €{grandTotal.toFixed(2)}
             </div>
           </CardContent>
         </Card>
