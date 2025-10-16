@@ -7,16 +7,18 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Dashboard from "@/pages/dashboard";
 import Expenses from "@/pages/expenses";
+import Payments from "@/pages/payments";
 import Reports from "@/pages/reports";
 import NotFound from "@/pages/not-found";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Receipt, FileText } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, FileText } from "lucide-react";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/expenses" component={Expenses} />
+      <Route path="/payments" component={Payments} />
       <Route path="/reports" component={Reports} />
       <Route component={NotFound} />
     </Switch>
@@ -28,13 +30,14 @@ function Navigation() {
 
   const getActiveTab = () => {
     if (location === "/expenses") return "expenses";
+    if (location === "/payments") return "payments";
     if (location === "/reports") return "reports";
     return "dashboard";
   };
 
   return (
     <Tabs value={getActiveTab()} className="w-auto">
-      <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+      <TabsList className="grid w-full grid-cols-4 lg:w-auto">
         <Link href="/">
           <TabsTrigger value="dashboard" className="gap-2" data-testid="nav-dashboard">
             <LayoutDashboard className="h-4 w-4" />
@@ -45,6 +48,12 @@ function Navigation() {
           <TabsTrigger value="expenses" className="gap-2" data-testid="nav-expenses">
             <Receipt className="h-4 w-4" />
             <span className="hidden sm:inline">Expenses</span>
+          </TabsTrigger>
+        </Link>
+        <Link href="/payments">
+          <TabsTrigger value="payments" className="gap-2" data-testid="nav-payments">
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden sm:inline">Payments</span>
           </TabsTrigger>
         </Link>
         <Link href="/reports">
