@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { loginMutation, registerMutation, user } = useAuth();
+  const { loginMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
   if (user) {
@@ -21,25 +20,18 @@ export default function AuthPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (isLogin) {
-      loginMutation.mutate({ username, password });
-    } else {
-      registerMutation.mutate({ username, password });
-    }
+    loginMutation.mutate({ username, password });
   };
 
-  const isLoading = loginMutation.isPending || registerMutation.isPending;
+  const isLoading = loginMutation.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{isLogin ? "Login" : "Create Account"}</CardTitle>
+          <CardTitle>Login</CardTitle>
           <CardDescription>
-            {isLogin
-              ? "Enter your credentials to access the expense tracker"
-              : "Create a new account to get started"}
+            Enter your credentials to access the expense tracker
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,21 +67,8 @@ export default function AuthPage() {
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLogin ? "Login" : "Register"}
+              Login
             </Button>
-            <div className="text-center text-sm">
-              <button
-                type="button"
-                data-testid="button-toggle-mode"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-primary hover:underline"
-                disabled={isLoading}
-              >
-                {isLogin
-                  ? "Don't have an account? Register"
-                  : "Already have an account? Login"}
-              </button>
-            </div>
           </form>
         </CardContent>
       </Card>
