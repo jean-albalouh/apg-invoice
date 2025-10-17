@@ -20,15 +20,15 @@ Preferred communication style: Simple, everyday language.
 ### Backend
 
 -   **Server:** Express.js with TypeScript, RESTful API design.
--   **Authentication:** Session-based authentication using Passport.js with PostgreSQL session store.
-    -   Password hashing with scrypt and timing-safe comparison
+-   **Authentication:** Single-credential authentication using Passport.js with PostgreSQL session store.
+    -   Single username/password stored as environment variables (APP_USERNAME, APP_PASSWORD)
+    -   No user registration - credentials are shared among authorized users
     -   Hardened session cookies (httpOnly, sameSite: "lax", secure in production)
     -   All API endpoints protected with authentication middleware
     -   7-day session persistence
 -   **Data Validation:** Zod schemas shared between client/server, `zod-validation-error` for detailed messages.
 -   **API Endpoints:** All endpoints require authentication. CRUD operations for expenses and payments, with payment auto-distribution and reversal logic.
-    -   `POST /api/register`: User registration with validation
-    -   `POST /api/login`: User authentication
+    -   `POST /api/login`: User authentication (checks against environment credentials)
     -   `POST /api/logout`: Session termination
     -   `GET /api/user`: Get current authenticated user
     -   `POST /api/expenses`: Create expense (includes date, client, productDescription, quantity, productCost (TTC), markupPercentage, shippingCost, shippingCarrier, status, tvaPercentage, markupAppliesTo, notes).
@@ -40,7 +40,6 @@ Preferred communication style: Simple, everyday language.
 
 -   **Database:** PostgreSQL (via Neon serverless) using Drizzle ORM.
 -   **Schema:**
-    -   `users` table: Stores user credentials with hashed passwords
     -   `expenses` table: Stores detailed expense records including `tvaPercentage`, `markupAppliesTo` (HT/TTC), and calculated amounts.
     -   `payments` table: Records client payments.
     -   `payment_applications` table: Links payments to specific expenses for tracking distribution.
