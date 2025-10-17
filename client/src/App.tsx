@@ -5,21 +5,26 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
+import AuthPage from "@/pages/auth";
 import Dashboard from "@/pages/dashboard";
 import Expenses from "@/pages/expenses";
 import Payments from "@/pages/payments";
 import Reports from "@/pages/reports";
 import NotFound from "@/pages/not-found";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Receipt, CreditCard, FileText } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, FileText, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/expenses" component={Expenses} />
-      <Route path="/payments" component={Payments} />
-      <Route path="/reports" component={Reports} />
+      <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/expenses" component={Expenses} />
+      <ProtectedRoute path="/payments" component={Payments} />
+      <ProtectedRoute path="/reports" component={Reports} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -67,33 +72,57 @@ function Navigation() {
   );
 }
 
+function AppHeader() {
+  const { user, logoutMutation } = useAuth();
+  
+  return (
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div>
+              <h1 className="text-xl font-semibold">Expense Tracker</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                Shipping Fulfillment
+              </p>
+            </div>
+            {user && <Navigation />}
+          </div>
+          <div className="flex items-center gap-2">
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="button-logout"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            )}
+            <ThemeToggle />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          <div className="min-h-screen bg-background">
-            <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex h-16 items-center justify-between">
-                  <div className="flex items-center gap-8">
-                    <div>
-                      <h1 className="text-xl font-semibold">Expense Tracker</h1>
-                      <p className="text-xs text-muted-foreground hidden sm:block">
-                        Shipping Fulfillment
-                      </p>
-                    </div>
-                    <Navigation />
-                  </div>
-                  <ThemeToggle />
-                </div>
-              </div>
-            </header>
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <Router />
-            </main>
-          </div>
-          <Toaster />
+          <AuthProvider>
+            <div className="min-h-screen bg-background">
+              <AppHeader />
+              <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <Router />
+              </main>
+            </div>
+            <Toaster />
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
