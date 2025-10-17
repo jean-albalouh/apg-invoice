@@ -3,8 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertExpenseSchema, insertPaymentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication (blueprint:javascript_auth_all_persistance)
+  setupAuth(app);
   app.get("/api/expenses", async (_req, res) => {
     try {
       const expenses = await storage.getAllExpenses();

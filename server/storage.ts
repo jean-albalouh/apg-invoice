@@ -2,14 +2,23 @@ import {
   expenses, 
   payments, 
   paymentApplications,
+  users,
   type Expense, 
   type InsertExpense,
   type Payment,
   type InsertPayment,
-  type PaymentApplication
+  type PaymentApplication,
+  type User,
+  type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
+// Session store setup (blueprint:javascript_auth_all_persistance)
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getAllExpenses(): Promise<Expense[]>;
@@ -25,9 +34,22 @@ export interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   deletePayment(id: string): Promise<boolean>;
   getPaymentApplications(paymentId: string): Promise<PaymentApplication[]>;
+  
+  // User methods (blueprint:javascript_auth_all_persistance)
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    // Initialize session store (blueprint:javascript_auth_all_persistance)
+    this.sessionStore = new PostgresSessionStore({ pool, createTableIfMissing: true });
+  }
+
   async getAllExpenses(): Promise<Expense[]> {
     return await db.select().from(expenses);
   }
@@ -43,6 +65,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertExpense,
         productCost: insertExpense.productCost.toString(),
+        tvaPercentage: insertExpense.tvaPercentage.toString(),
         markupPercentage: insertExpense.markupPercentage.toString(),
         shippingCost: insertExpense.shippingCost.toString(),
         paymentReceived: insertExpense.paymentReceived.toString(),
@@ -57,6 +80,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         ...insertExpense,
         productCost: insertExpense.productCost.toString(),
+        tvaPercentage: insertExpense.tvaPercentage.toString(),
         markupPercentage: insertExpense.markupPercentage.toString(),
         shippingCost: insertExpense.shippingCost.toString(),
         paymentReceived: insertExpense.paymentReceived.toString(),
@@ -182,6 +206,22 @@ export class DatabaseStorage implements IStorage {
         remainingPayment -= amountToApply;
       }
     }
+  }
+
+  // User methods (blueprint:javascript_auth_all_persistance)
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
   }
 }
 
