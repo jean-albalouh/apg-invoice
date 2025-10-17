@@ -3,12 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertExpenseSchema, insertPaymentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { setupAuth } from "./auth";
+import { setupAuth, requireAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication (blueprint:javascript_auth_all_persistance)
   setupAuth(app);
-  app.get("/api/expenses", async (_req, res) => {
+  
+  // All API routes require authentication
+  app.get("/api/expenses", requireAuth, async (_req, res) => {
     try {
       const expenses = await storage.getAllExpenses();
       res.json(expenses);
@@ -18,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/invoice-numbers", async (_req, res) => {
+  app.get("/api/invoice-numbers", requireAuth, async (_req, res) => {
     try {
       const invoiceNumbers = await storage.getAllInvoiceNumbers();
       res.json(invoiceNumbers);
@@ -27,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expenses/:id", async (req, res) => {
+  app.get("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
       const expense = await storage.getExpense(req.params.id);
       if (!expense) {
@@ -39,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses", async (req, res) => {
+  app.post("/api/expenses", requireAuth, async (req, res) => {
     try {
       const result = insertExpenseSchema.safeParse(req.body);
       if (!result.success) {
@@ -55,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/expenses/:id", async (req, res) => {
+  app.patch("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
       const result = insertExpenseSchema.safeParse(req.body);
       if (!result.success) {
@@ -73,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/expenses/:id", async (req, res) => {
+  app.delete("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
       const deleted = await storage.deleteExpense(req.params.id);
       if (!deleted) {
@@ -86,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment routes
-  app.get("/api/payments", async (_req, res) => {
+  app.get("/api/payments", requireAuth, async (_req, res) => {
     try {
       const payments = await storage.getAllPayments();
       res.json(payments);
@@ -95,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/payments/:id", async (req, res) => {
+  app.get("/api/payments/:id", requireAuth, async (req, res) => {
     try {
       const payment = await storage.getPayment(req.params.id);
       if (!payment) {
@@ -110,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", requireAuth, async (req, res) => {
     try {
       const result = insertPaymentSchema.safeParse(req.body);
       if (!result.success) {
@@ -125,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/payments/:id", async (req, res) => {
+  app.delete("/api/payments/:id", requireAuth, async (req, res) => {
     try {
       const deleted = await storage.deletePayment(req.params.id);
       if (!deleted) {

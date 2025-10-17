@@ -20,8 +20,17 @@ Preferred communication style: Simple, everyday language.
 ### Backend
 
 -   **Server:** Express.js with TypeScript, RESTful API design.
+-   **Authentication:** Session-based authentication using Passport.js with PostgreSQL session store.
+    -   Password hashing with scrypt and timing-safe comparison
+    -   Hardened session cookies (httpOnly, sameSite: "lax", secure in production)
+    -   All API endpoints protected with authentication middleware
+    -   7-day session persistence
 -   **Data Validation:** Zod schemas shared between client/server, `zod-validation-error` for detailed messages.
--   **API Endpoints:** CRUD operations for expenses and payments, with payment auto-distribution and reversal logic.
+-   **API Endpoints:** All endpoints require authentication. CRUD operations for expenses and payments, with payment auto-distribution and reversal logic.
+    -   `POST /api/register`: User registration with validation
+    -   `POST /api/login`: User authentication
+    -   `POST /api/logout`: Session termination
+    -   `GET /api/user`: Get current authenticated user
     -   `POST /api/expenses`: Create expense (includes date, client, productDescription, quantity, productCost (TTC), markupPercentage, shippingCost, shippingCarrier, status, tvaPercentage, markupAppliesTo, notes).
     -   `PATCH /api/expenses/:id`: Update existing expense.
     -   `POST /api/payments`: Create payment with auto-distribution to oldest unpaid expenses.
@@ -31,13 +40,16 @@ Preferred communication style: Simple, everyday language.
 
 -   **Database:** PostgreSQL (via Neon serverless) using Drizzle ORM.
 -   **Schema:**
+    -   `users` table: Stores user credentials with hashed passwords
     -   `expenses` table: Stores detailed expense records including `tvaPercentage`, `markupAppliesTo` (HT/TTC), and calculated amounts.
     -   `payments` table: Records client payments.
     -   `payment_applications` table: Links payments to specific expenses for tracking distribution.
+    -   `session` table: PostgreSQL session store for authentication (auto-created)
 -   **ORM:** Drizzle ORM with `drizzle-kit` for migrations.
 
 ### Core Features & Business Logic
 
+-   **Access Control:** Username/password authentication required to access the application. Secure session-based authentication with protected API endpoints ensures only authorized users can view or modify expense data.
 -   **Expense Tracking:** Comprehensive fields including quantity, status, shipping carrier, and payment tracking.
 -   **TVA Calculation:** Automatic HT/TTC calculation based on selectable TVA rates (5.5%, 10%, 20%).
 -   **Flexible Markup (Option A):** 5% default markup (adjustable) with two application modes:

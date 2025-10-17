@@ -6,12 +6,21 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, insertUserSchema } from "@shared/schema";
+import { fromZodError } from "zod-validation-error";
 
 declare global {
   namespace Express {
     interface User extends SelectUser {}
   }
+}
+
+// Authentication middleware
+export function requireAuth(req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).send("Unauthorized");
+  }
+  next();
 }
 
 const scryptAsync = promisify(scrypt);
@@ -35,6 +44,12 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV !== "development",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    },
   };
 
   app.set("trust proxy", 1);
@@ -60,14 +75,20 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/register", async (req, res, next) => {
-    const existingUser = await storage.getUserByUsername(req.body.username);
+    // Validate request body with Zod
+    const result = insertUserSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).send(fromZodError(result.error).message);
+    }
+
+    const existingUser = await storage.getUserByUsername(result.data.username);
     if (existingUser) {
       return res.status(400).send("Username already exists");
     }
 
     const user = await storage.createUser({
-      ...req.body,
-      password: await hashPassword(req.body.password),
+      ...result.data,
+      password: await hashPassword(result.data.password),
     });
 
     req.login(user, (err) => {
