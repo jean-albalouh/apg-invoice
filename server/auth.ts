@@ -1,41 +1,24 @@
-// Authentication setup (blueprint:javascript_auth_all_persistance)
+// Single-credential authentication setup
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser, insertUserSchema } from "@shared/schema";
-import { fromZodError } from "zod-validation-error";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User {
+      username: string;
+    }
   }
 }
 
 // Authentication middleware
-export function requireAuth(req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) {
     return res.status(401).send("Unauthorized");
   }
   next();
-}
-
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 export function setupAuth(app: Express) {
@@ -58,43 +41,22 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
+    new LocalStrategy((username, password, done) => {
+      // Check against environment credentials
+      const validUsername = process.env.APP_USERNAME;
+      const validPassword = process.env.APP_PASSWORD;
+
+      if (username === validUsername && password === validPassword) {
+        return done(null, { username });
       } else {
-        return done(null, user);
+        return done(null, false);
       }
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
-  passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    // Validate request body with Zod
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).send(fromZodError(result.error).message);
-    }
-
-    const existingUser = await storage.getUserByUsername(result.data.username);
-    if (existingUser) {
-      return res.status(400).send("Username already exists");
-    }
-
-    const user = await storage.createUser({
-      ...result.data,
-      password: await hashPassword(result.data.password),
-    });
-
-    req.login(user, (err) => {
-      if (err) return next(err);
-      res.status(201).json(user);
-    });
+  passport.serializeUser((user, done) => done(null, user.username));
+  passport.deserializeUser((username: string, done) => {
+    done(null, { username });
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
